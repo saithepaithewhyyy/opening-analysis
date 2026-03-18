@@ -1,8 +1,6 @@
-# inference.py
 import csv, io, requests
-import opening_classifier as cc   # the compiled .so
+import chess_classifier as cc
 
-# ── Load ECO db once at startup ──────────────────────────────────────────────
 
 def load_eco_rows() -> list[tuple[str,str,str]]:
     rows = []
@@ -16,6 +14,8 @@ def load_eco_rows() -> list[tuple[str,str,str]]:
     return rows
 
 engine = cc.ClassifierEngine()
+load_eco_rows()
+print("engine_load_success")
 engine.load_eco(load_eco_rows())
 
 # ── Classify ─────────────────────────────────────────────────────────────────
