@@ -1,13 +1,16 @@
 #include "movegen.hpp"
+#include "bltn_ctzll.hpp"
 #include <cstdlib>
 #include <cstring>
 
 using namespace std;
 
-static inline int lsb(uint64_t b) { return __builtin_ctzll(b); }
+static inline int lsb(uint64_t b) { return ctzll(b); }
 
 static inline uint64_t pop_lsb(uint64_t& b) {
-    uint64_t t = b & -b; b &= b-1; return t;
+    uint64_t t = b & -b; 
+    b &= b-1; 
+    return t;
 }
 
 static uint64_t KNIGHT_ATK[64];
@@ -82,7 +85,7 @@ static uint64_t attack_lines(int sq, uint64_t occ, bool diagonal) {
 
 
         if (blk) {
-            int blocker = (dirs[i] >= 4 || dirs[i] == 0 || dirs[i] == 2) ? lsb(blk) : 63 - __builtin_clzll(blk);
+            int blocker = (dirs[i] >= 4 || dirs[i] == 0 || dirs[i] == 2) ? lsb(blk) : 63 - ctzll(blk);
             ray ^= RAY[blocker][dirs[i]];
         }
         

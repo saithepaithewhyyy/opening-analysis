@@ -3,3 +3,6 @@ __pycache__/
 
 .vscode/
 .vscode/c_cpp_properties.json
+
+build/
+chess_classifier.egg-info/

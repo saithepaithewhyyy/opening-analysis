@@ -1,4 +1,5 @@
 #include "board.hpp"
+#include "bltn_ctzll.hpp"
 #include <sstream>
 #include <stdexcept>
 
@@ -60,7 +61,7 @@ uint64_t compute_zobrist(const Board& b) {
         for (int p = 0; p < 6; p++) {
             uint64_t bb = b.bb[c][p];
             while (bb) {
-                int sq = __builtin_ctzll(bb);
+                int sq = ctzll(bb);
                 z ^= ZT.piece[c][p][sq];
                 bb &= bb - 1;
             }

@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=64", "pybind11>=2.11"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chess_classifier"
+version = "0.1.0"
+description = "Fast Bayesian chess opening classifier"
+requires-python = ">=3.9"
+dependencies = [
+    "pybind11>=2.11",
+    "requests",
+]
+
+[tool.setuptools]
+packages = []
