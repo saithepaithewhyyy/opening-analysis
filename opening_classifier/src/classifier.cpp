@@ -110,8 +110,10 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
         }
 
         done++;
-        if (done % 100 == 0)
-            cout << "  Indexed " << done << "/" << total << " roots...\n";
+        // if (done % 100 == 0)
+            // cout << "  Indexed " << done << "/" << total << " roots...\n";
+        
+        cout << "  Indexed " << done << "/" << total << " roots...\n";
     }
 
     cout << "Index built. " << reach_index_.size() << " unique positions indexed.\n";

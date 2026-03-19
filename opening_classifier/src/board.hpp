@@ -14,17 +14,17 @@ struct Move {
     uint8_t from;
     uint8_t to;
     uint8_t promotion;   
-    bool    is_castle;
-    bool    is_ep;
+    bool is_castle;
+    bool is_ep;
 };
 
 struct Board {
-    uint64_t bb[2][6]  = {};   // bb[color][piece]
-    uint64_t occupied  = 0;
-    Color    turn      = WHITE;
-    uint8_t  castling  = 0xF;  // bits: WK WQ BK BQ
-    uint8_t  ep_sq     = 255;  // 255 = none
-    uint64_t zobrist   = 0;
+    uint64_t bb[2][6] = {};   // bb[color][piece]
+    uint64_t occupied = 0;
+    Color turn = WHITE;
+    uint8_t castling = 0xF;  // WK WQ BK BQ
+    uint8_t ep_sq = 255;  // 255 = none // used throughout
+    uint64_t zobrist = 0;
 
     uint64_t us() const 
     { 

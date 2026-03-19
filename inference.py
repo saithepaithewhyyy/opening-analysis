@@ -1,10 +1,30 @@
 import csv, io, requests
 import chess_classifier as cc
+import chess
+from typing import Optional
+
+def pgn_to_fen(pgn_string: str) -> Optional[str]:
+    board = chess.Board()
+
+    tokens = pgn_string.strip().split()
+
+    for token in tokens:
+        if token.endswith("."):
+            continue
+
+        try:
+            move = board.parse_san(token)
+        except Exception:
+            return None  # invalid PGN
+
+        board.push(move)
+
+    return board.fen()
 
 
 def load_eco_rows() -> list[tuple[str,str,str]]:
     rows = []
-    for letter in "abcde":
+    for letter in "a":
         url  = f"https://raw.githubusercontent.com/lichess-org/chess-openings/master/{letter}.tsv"
         response = requests.get(url)
         text = response.text
@@ -20,12 +40,15 @@ def load_eco_rows() -> list[tuple[str,str,str]]:
             name = (r.get("name") or "").strip()
 
             if pgn:
-                rows.append((eco, name, pgn)) 
+                # print(pgn_to_fen(pgn))
+                fen = pgn_to_fen(pgn)
+                rows.append((eco, name, fen)) 
                 
     return rows
 
 engine = cc.ClassifierEngine()
 engine.load_eco(load_eco_rows())
+engine.build_index()
 
 # ── Classify ─────────────────────────────────────────────────────────────────
 
