@@ -24,7 +24,7 @@ def pgn_to_fen(pgn_string: str) -> Optional[str]:
 
 def load_eco_rows() -> list[tuple[str,str,str]]:
     rows = []
-    for letter in "a":
+    for letter in "b":
         url  = f"https://raw.githubusercontent.com/lichess-org/chess-openings/master/{letter}.tsv"
         response = requests.get(url)
         text = response.text
@@ -59,4 +59,5 @@ def classify(fen: str, top_n: int = 5):
               f"post={r.posterior:.4f}  "
               f"path={r.path_length}")
 
-classify("rnbqkbnr/pp1ppppp/2p5/3P4/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 2")
+# Sicialian Dragon (Accelerated) B34
+classify("r1bqk1nr/pp1pppbp/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 1 6")

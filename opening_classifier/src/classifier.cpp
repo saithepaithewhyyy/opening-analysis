@@ -6,6 +6,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <iostream>
+#include <ctime>
 
 using namespace std;
 
@@ -46,10 +47,16 @@ void ClassifierEngine::load_priors(const unordered_map<string, double>& priors)
 
 
 void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
+    
+    time_t now = time(nullptr); 
+    char* dt = ctime(&now);  
+    
     reach_index_.clear();
-
+    
     int total = (int)roots_.size();
     int done  = 0;
+
+    cout << dt << " " << "Build Index BFS initiated with" << total << "ECO's" << endl;
 
     for (auto& root : roots_) {
         // BFS  
@@ -58,6 +65,8 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
             double log_prob;
             int    depth;
         };
+        
+        cout << dt << " " << "Started " << root.eco << " ECO\n" ;
 
         unordered_map<uint64_t, double> visited;
         visited[root.board.zobrist] = 0.0;
@@ -109,11 +118,8 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
             });
         }
 
-        done++;
-        // if (done % 100 == 0)
-            // cout << "  Indexed " << done << "/" << total << " roots...\n";
-        
-        cout << "  Indexed " << done << "/" << total << " roots...\n";
+        done++;        
+        cout << dt << "  Indexed " << done << "/" << total << " roots...\n";
     }
 
     cout << "Index built. " << reach_index_.size() << " unique positions indexed.\n";
