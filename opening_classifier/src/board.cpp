@@ -10,12 +10,12 @@ static const char PIECE_CHARS[] = "pnbrqk";
 Board board_from_fen(const string& fen) {
     Board b = {};
     istringstream ss(fen);
-    string placement, turn_str, castle_str, ep_str;
-    ss >> placement >> turn_str >> castle_str >> ep_str;
+    string placement, turn_str, castle_str, ep_str, move;
+    ss >> placement >> turn_str >> castle_str >> ep_str >> move;
 
     int sq = 56;
     for (char c : placement) {
-        if (c == '/') { sq -= 16; continue; }
+        if (c == '/') { sq -= 15; continue; }
         if (c >= '1' && c <= '8') { 
             sq += (c - '0'); 
             continue; 

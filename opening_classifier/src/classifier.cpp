@@ -66,6 +66,9 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
             int    depth;
         };
         
+        now = time(nullptr);
+        dt = ctime(&now);
+
         cout << dt << " " << "Started " << root.eco << " ECO\n" ;
 
         unordered_map<uint64_t, double> visited;

@@ -48,6 +48,7 @@ def load_eco_rows() -> list[tuple[str,str,str]]:
 engine = cc.ClassifierEngine()
 engine.load_eco(load_eco_rows())
 engine.build_index()
+engine.save_index()
 
 # ── Classify ─────────────────────────────────────────────────────────────────
 
@@ -59,4 +60,4 @@ def classify(fen: str, top_n: int = 5):
               f"path={r.path_length}")
 
 # Sicialian Dragon (Accelerated) B34
-classify("r1bqk1nr/pp1pppbp/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq -")
+classify("r1bqk1nr/pp1pppbp/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 1 6")
