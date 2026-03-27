@@ -85,7 +85,7 @@ static uint64_t attack_lines(int sq, uint64_t occ, bool diagonal) {
 
 
         if (blk) {
-            int blocker = (dirs[i] >= 4 || dirs[i] == 0 || dirs[i] == 2) ? lsb(blk) : 63 - ctzll(blk);
+            int blocker = (dirs[i] == 0 || dirs[i] == 2 || dirs[i] == 4 || dirs[i] == 5) ? lsb(blk) : 63 - ctzll(blk);
             ray ^= RAY[blocker][dirs[i]];
         }
         

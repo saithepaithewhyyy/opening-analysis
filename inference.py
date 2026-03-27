@@ -3,15 +3,13 @@ import chess_classifier as cc
 import chess
 from typing import Optional
 
-def pgn_to_fen(pgn_string: str) -> Optional[str]:
+def pgn_process(pgn_string: str) -> Optional[str]:
     board = chess.Board()
 
     tokens = pgn_string.strip().split()
-
     for token in tokens:
         if token.endswith("."):
             continue
-
         try:
             move = board.parse_san(token)
         except Exception:
@@ -40,11 +38,12 @@ def load_eco_rows() -> list[tuple[str,str,str]]:
             name = (r.get("name") or "").strip()
 
             if pgn:
-                # print(pgn_to_fen(pgn))
-                fen = pgn_to_fen(pgn)
-                rows.append((eco, name, fen)) 
+                fen = pgn_process(pgn)
+                if fen is not None:    
+                    rows.append((eco, name, fen)) 
                 
     return rows
+
 
 engine = cc.ClassifierEngine()
 engine.load_eco(load_eco_rows())
@@ -60,4 +59,4 @@ def classify(fen: str, top_n: int = 5):
               f"path={r.path_length}")
 
 # Sicialian Dragon (Accelerated) B34
-classify("r1bqk1nr/pp1pppbp/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 1 6")
+classify("r1bqk1nr/pp1pppbp/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq -")
