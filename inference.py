@@ -23,7 +23,9 @@ def pgn_process(pgn_string: str) -> Optional[str]:
 def load_eco_rows() -> list[tuple[str,str,str]]:
     rows = []
     for letter in "b":
+        count = 0
         url  = f"https://raw.githubusercontent.com/lichess-org/chess-openings/master/{letter}.tsv"
+        # url  = f"https://raw.githubusercontent.com/saithepaithewhyyy/opening-analysis/refs/heads/main/test.tsv"
         response = requests.get(url)
         text = response.text
     
@@ -40,7 +42,9 @@ def load_eco_rows() -> list[tuple[str,str,str]]:
             if pgn:
                 fen = pgn_process(pgn)
                 if fen is not None:    
-                    rows.append((eco, name, fen)) 
+                    rows.append((eco+str(count), name, fen)) 
+                    
+            count = count + 1
                 
     return rows
 
@@ -48,7 +52,7 @@ def load_eco_rows() -> list[tuple[str,str,str]]:
 engine = cc.ClassifierEngine()
 engine.load_eco(load_eco_rows())
 engine.build_index()
-engine.save_index()
+# engine.save_index()
 
 # ── Classify ─────────────────────────────────────────────────────────────────
 
