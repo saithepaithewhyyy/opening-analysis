@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <ctime>
+#include <unordered_set>
 
 using namespace std;
 
@@ -16,12 +17,16 @@ void ClassifierEngine::load_eco(const vector<tuple<string,string,string>>& rows)
     eco_name_.clear();
     all_eco_codes_.clear();
 
+    unordered_set<string> seen_eco;
     for (auto& [eco, name, epd] : rows) {
         try {
             Board b = board_from_fen(epd);
             roots_.push_back({eco, name, b, default_prior_});
             eco_name_[eco] = name;
             all_eco_codes_.push_back(eco);
+            if(seen_eco.insert(eco).second){
+                all_eco_codes_.push_back(eco);
+            }
         } catch (...) {
             cerr << "Skipping invalid EPD: " << epd << "\n";
         }
