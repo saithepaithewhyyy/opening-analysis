@@ -25,10 +25,10 @@ class ClassifierEngine {
 public:
     static constexpr double EPSILON = 1e-12;
     static constexpr double MIN_LOG_PROB = -20.0;
-    static constexpr int MAX_DEPTH = 4;
+    static constexpr int MAX_DEPTH = 0;
 
     void load_eco(const vector<tuple<string,string,string>>& rows);
-    void load_priors(const unordered_map<string, double>& priors);
+    void load_priors(const unordered_map<string, double>& priors = {});
 
     void build_index(int max_depth = MAX_DEPTH, double min_log_prob = MIN_LOG_PROB);
 

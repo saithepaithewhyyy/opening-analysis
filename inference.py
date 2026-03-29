@@ -24,8 +24,8 @@ def load_eco_rows() -> list[tuple[str,str,str]]:
     rows = []
     for letter in "b":
         count = 0
-        url  = f"https://raw.githubusercontent.com/lichess-org/chess-openings/master/{letter}.tsv"
-        # url  = f"https://raw.githubusercontent.com/saithepaithewhyyy/opening-analysis/refs/heads/main/test.tsv"
+        # url  = f"https://raw.githubusercontent.com/lichess-org/chess-openings/master/{letter}.tsv"
+        url  = f"https://raw.githubusercontent.com/saithepaithewhyyy/Infinitely-Wide-Neural-Networks-for-Small-Data-Tasks/refs/heads/main/test.tsv"
         response = requests.get(url)
         text = response.text
     
@@ -51,12 +51,14 @@ def load_eco_rows() -> list[tuple[str,str,str]]:
 
 engine = cc.ClassifierEngine()
 engine.load_eco(load_eco_rows())
-engine.build_index()
+engine.load_priors({})
+engine.build_index(max_depth=2)
+# save_path = "index.bin"
 # engine.save_index()
 
 # ── Classify ─────────────────────────────────────────────────────────────────
 
-def classify(fen: str, top_n: int = 5):
+def classify(fen: str, top_n: int = 35):
     results = engine.classify(fen, top_n=top_n)
     for r in results:
         print(f"{r.eco:4s}  {r.name:45s}  "
