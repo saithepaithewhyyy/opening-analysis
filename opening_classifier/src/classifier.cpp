@@ -32,11 +32,11 @@ void ClassifierEngine::load_eco(const vector<tuple<string,string,string>>& rows)
 void ClassifierEngine::load_priors(const unordered_map<string, double>& priors)
 {
     priors_ = priors;
-    cout << "Loading default priors with default prior:" << default_prior_;
+    cout << "Loading default priors with default prior:" << default_prior_ << endl;
     double min_p = 1.0;
     for (auto& [eco, p] : priors)
         if (p > 0 && p < min_p) min_p = p;
-    default_prior_ = min_p * 0.1;
+    floor_prior_ = min_p * 0.1;
 
     for (auto& root : roots_) {
         auto it = priors_.find(root.eco);
@@ -55,7 +55,7 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     int total = (int)roots_.size();
     int done  = 0;
 
-    cout << dt << " " << "Build Index BFS initiated with" << total << "ECO's" << endl;
+    cout << dt << "Build Index BFS initiated with " << total << "ECO's" << endl;
 
     for (auto& root : roots_) {
         // BFS  
@@ -67,8 +67,6 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
         
         now = time(nullptr);
         dt = ctime(&now);
-
-        cout << dt << " " << "Started " << root.eco << " ECO\n" ;
 
         unordered_map<uint64_t, double> visited;
         visited[root.board.zobrist] = 0.0;
@@ -121,7 +119,7 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
         }
 
         done++;        
-        cout << dt << "  Indexed " << done << "/" << total << " roots...\n";
+        // cout << dt << "  Indexed " << done << "/" << total << " roots...\n";
     }
 
     cout << "Index built. " << reach_index_.size() << " unique positions indexed.\n";
@@ -142,7 +140,9 @@ vector<ScoredOpening> ClassifierEngine::classify( const string& fen, int top_n) 
         likelihoods[eco] = EPSILON;
 
     if (it != reach_index_.end()) {
+        cout << "Found " << it->second.size() << " entries for hash\n";
         for (auto& entry : it->second) {
+            cout << "  entry.eco='" << entry.eco << "' likelihood=" << entry.likelihood << " path=" << entry.path_length << "\n";
             likelihoods[entry.eco]  = entry.likelihood;
             path_lengths[entry.eco] = entry.path_length;
         }
@@ -155,7 +155,7 @@ vector<ScoredOpening> ClassifierEngine::classify( const string& fen, int top_n) 
     for (auto& eco : all_eco_codes_) {
         double L = likelihoods[eco];
 
-        double prior = default_prior_;
+        double prior = floor_prior_;
         auto pit = priors_.find(eco);
         if (pit != priors_.end()) prior = pit->second;
 

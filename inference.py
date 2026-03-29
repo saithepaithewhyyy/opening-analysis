@@ -22,10 +22,10 @@ def pgn_process(pgn_string: str) -> Optional[str]:
 
 def load_eco_rows() -> list[tuple[str,str,str]]:
     rows = []
-    for letter in "b":
+    for letter in "ab":
         count = 0
-        # url  = f"https://raw.githubusercontent.com/lichess-org/chess-openings/master/{letter}.tsv"
-        url  = f"https://raw.githubusercontent.com/saithepaithewhyyy/Infinitely-Wide-Neural-Networks-for-Small-Data-Tasks/refs/heads/main/test.tsv"
+        url  = f"https://raw.githubusercontent.com/lichess-org/chess-openings/master/{letter}.tsv"
+        # url  = f"https://raw.githubusercontent.com/saithepaithewhyyy/Infinitely-Wide-Neural-Networks-for-Small-Data-Tasks/refs/heads/main/test.tsv"
         response = requests.get(url)
         text = response.text
     
@@ -48,17 +48,17 @@ def load_eco_rows() -> list[tuple[str,str,str]]:
                 
     return rows
 
-
+rows = load_eco_rows()
 engine = cc.ClassifierEngine()
-engine.load_eco(load_eco_rows())
+engine.load_eco(rows)
 engine.load_priors({})
 engine.build_index(max_depth=2)
-# save_path = "index.bin"
-# engine.save_index()
+save_path = "index.bin"
+engine.save_index(save_path)
 
 # ── Classify ─────────────────────────────────────────────────────────────────
 
-def classify(fen: str, top_n: int = 35):
+def classify(fen: str, top_n: int = 3):
     results = engine.classify(fen, top_n=top_n)
     for r in results:
         print(f"{r.eco:4s}  {r.name:45s}  "
@@ -66,4 +66,4 @@ def classify(fen: str, top_n: int = 35):
               f"path={r.path_length}")
 
 # Sicialian Dragon (Accelerated) B34
-classify("r1bqk1nr/pp1pppbp/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 1 6")
+classify("r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 1 5")

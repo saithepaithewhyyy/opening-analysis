@@ -23,9 +23,10 @@ struct ReachEntry {
 
 class ClassifierEngine {
 public:
-    static constexpr double EPSILON = 1e-12;
-    static constexpr double MIN_LOG_PROB = -20.0;
-    static constexpr int MAX_DEPTH = 0;
+        int count_qhi = 0;
+    static constexpr double EPSILON = 1e-9;
+    static constexpr double MIN_LOG_PROB = -9;
+    static constexpr int MAX_DEPTH = 2;
 
     void load_eco(const vector<tuple<string,string,string>>& rows);
     void load_priors(const unordered_map<string, double>& priors = {});
@@ -48,6 +49,7 @@ private:
     vector<EcoRoot> roots_;
     unordered_map<string, double> priors_;
     double default_prior_ = 0.00133155792;
+    double floor_prior_ = 0.00133155792;
 
     unordered_map<uint64_t, vector<ReachEntry>> reach_index_;
 

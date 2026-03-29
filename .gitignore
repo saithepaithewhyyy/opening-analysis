@@ -2,6 +2,7 @@ __pycache__/
 */__pycache__/
 
 .vscode/
+*.bin
 
 build/
 chess_classifier.egg-info/

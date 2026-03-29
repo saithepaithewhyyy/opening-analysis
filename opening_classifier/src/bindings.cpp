@@ -31,4 +31,6 @@ PYBIND11_MODULE(chess_classifier, m) {
           .def("save_index", &ClassifierEngine::save_index, py::arg("path"))
           .def("load_index", &ClassifierEngine::load_index, py::arg("path"))
           .def("classify", &ClassifierEngine::classify, py::arg("fen"), py::arg("top_n") = 5);
+
+     m.def("fen_to_hash", [](const string& fen) { Board b = board_from_fen(fen); return b.zobrist;});          
 }
