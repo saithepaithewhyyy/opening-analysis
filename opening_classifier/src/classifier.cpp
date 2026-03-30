@@ -141,7 +141,6 @@ vector<ScoredOpening> ClassifierEngine::classify( const string& fen, int top_n) 
         likelihoods[eco] = EPSILON;
 
     if (it != reach_index_.end()) {
-        cout << "Found " << it->second.size() << " entries for hash\n";
         for (auto& entry : it->second) {
             cout << "  entry.eco='" << entry.eco << "' likelihood=" << entry.likelihood << " path=" << entry.path_length << "\n";
             likelihoods[entry.eco]  = entry.likelihood;
