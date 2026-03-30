@@ -2,10 +2,12 @@
 #include "bltn_ctzll.hpp"
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 
 using namespace std;
 
 static inline int lsb(uint64_t b) { return ctzll(b); }
+static inline int msb(uint64_t b) { return clzll(b); }
 
 static inline uint64_t pop_lsb(uint64_t& b) {
     uint64_t t = b & -b; 
@@ -20,10 +22,10 @@ static uint64_t RAY[64][8];
 
 static const int DIR[8] = {8, -8, 1, -1, 9, 7, -9, -7};
 
-static bool tables_ready = false;
+// static bool tables_ready = false;
 
 static void init_tables() {
-    if (tables_ready) return;
+    // if (tables_ready) return;
     for (int sq = 0; sq < 64; sq++) {
         
         uint64_t b = 1ULL << sq;
@@ -64,7 +66,7 @@ static void init_tables() {
             }
         }
     }
-    tables_ready = true;
+    // tables_ready = true;
 }
 
 static uint64_t attack_lines(int sq, uint64_t occ, bool diagonal) {
@@ -85,7 +87,11 @@ static uint64_t attack_lines(int sq, uint64_t occ, bool diagonal) {
 
 
         if (blk) {
-            int blocker = (dirs[i] == 0 || dirs[i] == 2 || dirs[i] == 4 || dirs[i] == 5) ? lsb(blk) : 63 - clzll(blk);
+            int blocker;
+            if (dirs[i] == 0 || dirs[i] == 2 || dirs[i] == 4 || dirs[i] == 5)
+                blocker = lsb(blk);
+            else
+                blocker = msb(blk);
             ray ^= RAY[blocker][dirs[i]];
         }
         

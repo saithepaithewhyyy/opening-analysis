@@ -16,14 +16,17 @@ void ClassifierEngine::load_eco(const vector<tuple<string,string,string>>& rows)
     eco_name_.clear();
     all_eco_codes_.clear();
 
-    for (auto& [eco, name, epd] : rows) {
+    for (auto& [eco, name, fen] : rows) {
         try {
-            Board b = board_from_fen(epd);
+            Board b = board_from_fen(fen);
             roots_.push_back({eco, name, b, default_prior_});
+            auto& last = roots_.back();
+            if (last.board.occupied == 0 && last.board.zobrist != 0)
+                cerr << "CORRUPT board for " << eco << "\n";
             eco_name_[eco] = name;
             all_eco_codes_.push_back(eco);
         } catch (...) {
-            cerr << "Skipping invalid EPD: " << epd << "\n";
+            cerr << "Skipping invalid fen: " << fen << "\n";
         }
     }
     cout << "Loaded " << roots_.size() << " ECO roots.\n";

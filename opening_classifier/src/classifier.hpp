@@ -23,10 +23,9 @@ struct ReachEntry {
 
 class ClassifierEngine {
 public:
-        int count_qhi = 0;
     static constexpr double EPSILON = 1e-9;
     static constexpr double MIN_LOG_PROB = -9;
-    static constexpr int MAX_DEPTH = 2;
+    static constexpr int MAX_DEPTH = 3;
 
     void load_eco(const vector<tuple<string,string,string>>& rows);
     void load_priors(const unordered_map<string, double>& priors = {});

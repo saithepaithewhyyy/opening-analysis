@@ -22,10 +22,9 @@ def pgn_process(pgn_string: str) -> Optional[str]:
 
 def load_eco_rows() -> list[tuple[str,str,str]]:
     rows = []
-    for letter in "ab":
+    for letter in "abcde":
         count = 0
         url  = f"https://raw.githubusercontent.com/lichess-org/chess-openings/master/{letter}.tsv"
-        # url  = f"https://raw.githubusercontent.com/saithepaithewhyyy/Infinitely-Wide-Neural-Networks-for-Small-Data-Tasks/refs/heads/main/test.tsv"
         response = requests.get(url)
         text = response.text
     
@@ -56,20 +55,30 @@ engine.build_index(max_depth=2)
 save_path = "index.bin"
 engine.save_index(save_path)
 
-orig_hash = cc.fen_to_hash("r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 1 5")
-new_hash = cc.fen_to_hash("r1bqkbnr/pp1pppbp/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 1 5")
-
-print(f"Original Hash {orig_hash} - vs New Hash {new_hash}")
-
-# ── Classify ─────────────────────────────────────────────────────────────────
-
-def classify(fen: str, top_n: int = 3):
+def classify(fen: str, top_n: int = 3) -> list[tuple[str, str, float, float, int]]:
     results = engine.classify(fen, top_n=top_n)
+    prob = 1.0
+    EPS = 1e-4
+    filtered = []
+
     for r in results:
+        if prob > EPS:
+            filtered.append(r)
+            prob -= r.posterior
+        else:
+            break
+        
+    for r in filtered:
         print(f"{r.eco:4s}  {r.name:45s}  "
               f"post={r.posterior:.4f}  "
+              f"likelihood={r.likelihood:.4f} "
               f"path={r.path_length}")
+        
+    return filtered
 
 # Sicialian Dragon (Accelerated) B34
-# classify("r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 1 5")
-classify("r1bqk1nr/pp1pppbp/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 1 6")
+classify("r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 1 5")
+# # Nimzo Larsen Attack: Modern Variation
+classify("rnbqkbnr/pppp1ppp/8/4p3/8/1P6/P1PPPPPP/RNBQKBNR w KQkq - 0 2")
+# Scandivanian Defence, Modern Variation B02
+classify("rnbqkb1r/ppp1pppp/5n2/3P4/8/2N5/PPPP1PPP/R1BQKBNR b KQkq - 2 3")
