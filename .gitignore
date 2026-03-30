@@ -4,6 +4,9 @@ __pycache__/
 .vscode/
 *.bin
 
+*.tsv
+*/*.tsv
+
 build/
 chess_classifier.egg-info/
 clean_env/

@@ -56,6 +56,11 @@ engine.build_index(max_depth=2)
 save_path = "index.bin"
 engine.save_index(save_path)
 
+orig_hash = cc.fen_to_hash("r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 1 5")
+new_hash = cc.fen_to_hash("r1bqkbnr/pp1pppbp/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 1 5")
+
+print(f"Original Hash {orig_hash} - vs New Hash {new_hash}")
+
 # ── Classify ─────────────────────────────────────────────────────────────────
 
 def classify(fen: str, top_n: int = 3):
@@ -66,4 +71,5 @@ def classify(fen: str, top_n: int = 3):
               f"path={r.path_length}")
 
 # Sicialian Dragon (Accelerated) B34
-classify("r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 1 5")
+# classify("r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 1 5")
+classify("r1bqk1nr/pp1pppbp/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 1 6")

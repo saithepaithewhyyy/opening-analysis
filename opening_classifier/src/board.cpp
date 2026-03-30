@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 using namespace std;
+const ZobristTable ZT;
 
 static const char PIECE_CHARS[] = "pnbrqk";
 

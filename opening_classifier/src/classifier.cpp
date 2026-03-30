@@ -65,8 +65,6 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
             int    depth;
         };
         
-        now = time(nullptr);
-        dt = ctime(&now);
 
         unordered_map<uint64_t, double> visited;
         visited[root.board.zobrist] = 0.0;

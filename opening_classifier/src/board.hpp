@@ -55,6 +55,6 @@ struct ZobristTable {
     }
 };
 
-inline const ZobristTable ZT;  
+extern const ZobristTable ZT;  
 Board board_from_fen(const string& fen);
 uint64_t compute_zobrist(const Board& b);
