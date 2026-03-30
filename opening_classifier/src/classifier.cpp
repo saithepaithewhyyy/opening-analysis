@@ -142,7 +142,6 @@ vector<ScoredOpening> ClassifierEngine::classify( const string& fen, int top_n) 
 
     if (it != reach_index_.end()) {
         for (auto& entry : it->second) {
-            cout << "  entry.eco='" << entry.eco << "' likelihood=" << entry.likelihood << " path=" << entry.path_length << "\n";
             likelihoods[entry.eco]  = entry.likelihood;
             path_lengths[entry.eco] = entry.path_length;
         }
