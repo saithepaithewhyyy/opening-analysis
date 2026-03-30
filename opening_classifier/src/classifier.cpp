@@ -184,14 +184,26 @@ vector<ScoredOpening> ClassifierEngine::classify( const string& fen, int top_n) 
     return results;
 }
 
-
 void ClassifierEngine::save_index(const string& path) const {
     ofstream f(path, ios::binary);
     if (!f) throw runtime_error("Cannot open index file for writing: " + path);
 
+    uint64_t neco = all_eco_codes_.size();
+    f.write(reinterpret_cast<const char*>(&neco), sizeof(neco));
+    for (auto& eco : all_eco_codes_) {
+        uint32_t elen = eco.size();
+        f.write(reinterpret_cast<const char*>(&elen), sizeof(elen));
+        f.write(eco.data(), elen);
+
+        const string& name = eco_name_.count(eco) ? eco_name_.at(eco) : eco;
+        uint32_t nlen = name.size();
+        f.write(reinterpret_cast<const char*>(&nlen), sizeof(nlen));
+        f.write(name.data(), nlen);
+    }
+
+
     uint64_t n = reach_index_.size();
     f.write(reinterpret_cast<const char*>(&n), sizeof(n));
-
     for (auto& [zh, entries] : reach_index_) {
         f.write(reinterpret_cast<const char*>(&zh), sizeof(zh));
         uint32_t ne = entries.size();
@@ -212,9 +224,26 @@ void ClassifierEngine::load_index(const string& path) {
     if (!f) throw runtime_error("Cannot open index file: " + path);
 
     reach_index_.clear();
+    all_eco_codes_.clear();
+    eco_name_.clear();
+
+    uint64_t neco;
+    f.read(reinterpret_cast<char*>(&neco), sizeof(neco));
+    for (uint64_t i = 0; i < neco; i++) {
+        uint32_t elen;
+        f.read(reinterpret_cast<char*>(&elen), sizeof(elen));
+        string eco(elen, '\0');
+        f.read(eco.data(), elen);
+        uint32_t nlen;
+        f.read(reinterpret_cast<char*>(&nlen), sizeof(nlen));
+        string name(nlen, '\0');
+        f.read(name.data(), nlen);
+        all_eco_codes_.push_back(eco);
+        eco_name_[eco] = name;
+    }
+
     uint64_t n;
     f.read(reinterpret_cast<char*>(&n), sizeof(n));
-
     for (uint64_t i = 0; i < n; i++) {
         uint64_t zh;
         f.read(reinterpret_cast<char*>(&zh), sizeof(zh));
@@ -225,12 +254,13 @@ void ClassifierEngine::load_index(const string& path) {
             f.read(reinterpret_cast<char*>(&elen), sizeof(elen));
             string eco(elen, '\0');
             f.read(eco.data(), elen);
-            double  likelihood;  int32_t path_length;
+            double likelihood; int32_t path_length;
             f.read(reinterpret_cast<char*>(&likelihood),  sizeof(likelihood));
             f.read(reinterpret_cast<char*>(&path_length), sizeof(path_length));
             reach_index_[zh].push_back({eco, likelihood, path_length});
         }
     }
     cout << "Index loaded from " << path
-              << " (" << reach_index_.size() << " positions)\n";
+         << " (" << reach_index_.size() << " positions, "
+         << all_eco_codes_.size() << " ECOs)\n";
 }
