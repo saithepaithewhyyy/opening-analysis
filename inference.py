@@ -1,28 +1,33 @@
 import csv, io, requests
 import chess_classifier as cc
 import chess
-from typing import Optional
+from typing import Optional, Tuple
+import opening_priors as op
 
-def pgn_process(pgn_string: str) -> Optional[str]:
+def pgn_process(pgn_string: str) -> Tuple[Optional[str], str]:
     board = chess.Board()
 
     tokens = pgn_string.strip().split()
+    uci = ""
     for token in tokens:
         if token.endswith("."):
             continue
         try:
             move = board.parse_san(token)
+            uci += token 
         except Exception:
-            return None  # invalid PGN
+            print("Somehthing went wrong in PGN processing, skipping!")
+            return None, uci  # invalid PGN
 
         board.push(move)
 
-    return board.fen()
+    return board.fen(), uci
 
-
-def load_eco_rows() -> list[tuple[str,str,str]]:
+def load_data() -> tuple[list[tuple[str,str,str]], dict[str, int]]:
     rows = []
-    for letter in "abcde":
+    priors = {}
+    N: int = op.get_games("")
+    for letter in "a":
         count = 0
         url  = f"https://raw.githubusercontent.com/lichess-org/chess-openings/master/{letter}.tsv"
         response = requests.get(url)
@@ -39,24 +44,16 @@ def load_eco_rows() -> list[tuple[str,str,str]]:
             name = (r.get("name") or "").strip()
 
             if pgn:
-                fen = pgn_process(pgn)
-                if fen is not None:    
+                fen, uci = pgn_process(pgn)
+                if fen is not None and uci != "":    
                     rows.append((eco+str(count), name, fen)) 
+                    priors[eco] = op.get_games(uci) / N
                     
             count = count + 1
+            print(f"{count}\n")
                 
-    return rows
-
-# rows = load_eco_rows()
-# engine = cc.ClassifierEngine()
-# engine.load_eco(rows)
-# engine.load_priors({})
-# engine.build_index(max_depth=2)
-save_path = "index.bin"
-# engine.save_index(save_path)
-
-engine = cc.ClassifierEngine()
-engine.load_index(save_path)
+    print("done")            
+    return rows, priors
 
 def classify(fen: str, top_n: int = 3, verbose: bool = True) -> list[tuple[str, str, float, float, int]]:
     results = engine.classify(fen, top_n=top_n)
@@ -80,9 +77,24 @@ def classify(fen: str, top_n: int = 3, verbose: bool = True) -> list[tuple[str, 
         
     return filtered
 
+
+rows, priors = load_data()
+
+engine = cc.ClassifierEngine()
+engine.load_eco(rows)
+engine.load_priors(priors)
+engine.build_index(max_depth=3)
+save_path = "index.bin"
+engine.save_index(save_path)
+
+# engine = cc.ClassifierEngine()
+# engine.load_index(save_path)
+
 # Sicialian Dragon (Accelerated) B34
 classify("r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 1 5")
 # # Nimzo Larsen Attack: Modern Variation
 classify("rnbqkbnr/pppp1ppp/8/4p3/8/1P6/P1PPPPPP/RNBQKBNR w KQkq - 0 2")
 # Scandivanian Defence, Modern Variation B02
 classify("rnbqkb1r/ppp1pppp/5n2/3P4/8/2N5/PPPP1PPP/R1BQKBNR b KQkq - 2 3")
+
+classify("r1bq1rk1/ppppbppp/2n2n2/4p1B1/2B1P3/2PP1N2/PP3PPP/RN1Q1RK1 w - - 5 8")

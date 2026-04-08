@@ -7,6 +7,8 @@ __pycache__/
 *.tsv
 */*.tsv
 
+.env
+
 build/
 chess_classifier.egg-info/
 clean_env/
