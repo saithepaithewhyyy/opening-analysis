@@ -25,8 +25,7 @@ def pgn_process(pgn_string: str) -> Tuple[Optional[str], str]:
 
 def load_data() -> tuple[list[tuple[str,str,str]], dict[str, int]]:
     rows = []
-    priors = {}
-    N: int = op.get_games("")
+    eco_uci = {}
     for letter in "a":
         count = 0
         url  = f"https://raw.githubusercontent.com/lichess-org/chess-openings/master/{letter}.tsv"
@@ -47,13 +46,13 @@ def load_data() -> tuple[list[tuple[str,str,str]], dict[str, int]]:
                 fen, uci = pgn_process(pgn)
                 if fen is not None and uci != "":    
                     rows.append((eco+str(count), name, fen)) 
-                    priors[eco] = op.get_games(uci) / N
+                    eco_uci[eco] = uci
                     
             count = count + 1
             print(f"{count}\n")
                 
     print("done")            
-    return rows, priors
+    return rows, op.get_priors(eco_uci)
 
 def classify(fen: str, top_n: int = 3, verbose: bool = True) -> list[tuple[str, str, float, float, int]]:
     results = engine.classify(fen, top_n=top_n)
