@@ -42,9 +42,11 @@ def load_data() -> tuple[list[tuple[str,str,str]], dict[str, Optional[float]]]:
 
             if pgn:
                 fen = pgn_process(pgn)
-                if fen is not None:   
-                    rows.append((eco+str(count), name, fen)) 
+                if fen is not None: 
+                    eco += str(count)  
+                    rows.append((eco, name, fen)) 
                     eco_fen[eco] = fen
+                    count = count + 1
 
     print("done")            
     return rows, op.get_priors(eco_fen)

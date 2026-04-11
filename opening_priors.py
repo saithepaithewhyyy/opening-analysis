@@ -54,7 +54,7 @@ def get_priors(eco_fen: Dict[str, Optional[str]]) -> Dict[str, Optional[float]]:
             for move in moves:
                 new_fen = add_move(move["san"], fen)
                 if new_fen is not None and new_fen in eco_fen.values():
-                    priors[fen_eco[fen]] = float((move['white'] + move['draws'] + move['black'] + 0.0)/N)
+                    priors[fen_eco[new_fen]] = float((move['white'] + move['draws'] + move['black'] + 0.0)/N)
 
     with open(PRIOR_FILE, 'w', encoding='utf-8') as f:
         json.dump(priors, f)
