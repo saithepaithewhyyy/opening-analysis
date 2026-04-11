@@ -4,28 +4,26 @@ import chess
 from typing import Optional, Tuple
 import opening_priors as op
 
-def pgn_process(pgn_string: str) -> Tuple[Optional[str], str]:
+def pgn_process(pgn_string: str) -> Optional[str]:
     board = chess.Board()
 
     tokens = pgn_string.strip().split()
-    uci = ""
     for token in tokens:
         if token.endswith("."):
             continue
         try:
             move = board.parse_san(token)
-            uci += token 
         except Exception:
             print("Somehthing went wrong in PGN processing, skipping!")
-            return None, uci  # invalid PGN
+            return None  # invalid PGN
 
         board.push(move)
 
-    return board.fen(), uci
+    return board.fen()
 
-def load_data() -> tuple[list[tuple[str,str,str]], dict[str, int]]:
+def load_data() -> tuple[list[tuple[str,str,str]], dict[str, Optional[float]]]:
     rows = []
-    eco_uci = {}
+    eco_fen = {}
     for letter in "a":
         count = 0
         url  = f"https://raw.githubusercontent.com/lichess-org/chess-openings/master/{letter}.tsv"
@@ -43,16 +41,16 @@ def load_data() -> tuple[list[tuple[str,str,str]], dict[str, int]]:
             name = (r.get("name") or "").strip()
 
             if pgn:
-                fen, uci = pgn_process(pgn)
-                if fen is not None and uci != "":    
+                fen = pgn_process(pgn)
+                if fen is not None:   
                     rows.append((eco+str(count), name, fen)) 
-                    eco_uci[eco] = uci
+                    eco_fen[eco] = fen
                     
             count = count + 1
             print(f"{count}\n")
                 
     print("done")            
-    return rows, op.get_priors(eco_uci)
+    return rows, op.get_priors(eco_fen)
 
 def classify(fen: str, top_n: int = 3, verbose: bool = True) -> list[tuple[str, str, float, float, int]]:
     results = engine.classify(fen, top_n=top_n)
