@@ -24,17 +24,17 @@ def pgn_process(pgn_string: str) -> Optional[str]:
 def load_data() -> tuple[list[tuple[str,str,str]], dict[str, Optional[float]]]:
     rows = []
     eco_fen = {}
-    for letter in "a":
+    for letter in "abcde":
         count = 0
         url  = f"https://raw.githubusercontent.com/lichess-org/chess-openings/master/{letter}.tsv"
         response = requests.get(url)
         text = response.text
-    
+
         if response.status_code == 200:
             print(f"Loaded {letter} openings successfully")  
         else:
             print("Failed to load")
-            
+
         for r in csv.DictReader(io.StringIO(text), delimiter="\t"):
             pgn = (r.get("pgn") or "").strip()
             eco = (r.get("eco") or "").strip()
@@ -45,10 +45,7 @@ def load_data() -> tuple[list[tuple[str,str,str]], dict[str, Optional[float]]]:
                 if fen is not None:   
                     rows.append((eco+str(count), name, fen)) 
                     eco_fen[eco] = fen
-                    
-            count = count + 1
-            print(f"{count}\n")
-                
+
     print("done")            
     return rows, op.get_priors(eco_fen)
 
@@ -64,14 +61,14 @@ def classify(fen: str, top_n: int = 3, verbose: bool = True) -> list[tuple[str, 
             prob -= r.posterior
         else:
             break
-        
+
     if verbose: 
         for r in filtered:
             print(f"{r.eco:4s}  {r.name:45s}  "
                 f"post={r.posterior:.4f}  "
                 f"likelihood={r.likelihood:.4f} "
                 f"path={r.path_length} ")
-        
+
     return filtered
 
 
