@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <ctime>
+#include <chrono>
 
 using namespace std;
 
@@ -59,7 +60,7 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     int done  = 0;
 
     cout << dt << "Build Index BFS initiated with " << total << "ECO's" << endl;
-
+    auto start = chrono::steady_clock::now();
     for (auto& root : roots_) {
         // BFS  
         struct Node {
@@ -120,7 +121,14 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
         }
 
         done++;        
-        // cout << dt << "  Indexed " << done << "/" << total << " roots...\n";
+
+        auto now = chrono::steady_clock::now();
+        double elapsed = chrono::duration<double>(now - start).count();
+        double rate = done / elapsed;
+        double remaining = (total - done) / rate;
+
+        cout << "\rProgress: " << done << "/" << total
+            << " | ETA: " << int(remaining) << "s" << flush;
     }
 
     cout << "Index built. " << reach_index_.size() << " unique positions indexed.\n";

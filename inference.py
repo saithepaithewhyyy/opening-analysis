@@ -74,7 +74,7 @@ def classify(fen: str, top_n: int = 3, verbose: bool = True) -> list[tuple[str, 
     return filtered
 
 
-if __name__ == "__main_":
+if __name__ == "__main__":
     rows, priors = load_data()
     engine = cc.ClassifierEngine()
     engine.load_eco(rows)
