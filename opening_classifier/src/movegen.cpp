@@ -180,7 +180,17 @@ Board apply_move(const Board& b, const Move& m) {
 
 
 double move_score_heuristics(const Move& m){
-    double score;
+    // forward moves are scored higher
+    // king safety -> castling moves or moving away from checks
+    // central control
+    // developing moves
+    // early queen moves - discouraged
+    // rook connect
+    // flank pawn pushes/pawn gambits
+    // exponential scoring of each as move counts
+    // REINFORCE MOVES SO THAT WE NEVER HIT THE SAME HASH AGAIN!
+
+    double score = 1.0;
 
 
 
