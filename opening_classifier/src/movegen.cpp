@@ -179,7 +179,7 @@ Board apply_move(const Board& b, const Move& m) {
 }
 
 
-double move_scoring(const Move& m, const int& depth=5){
+double move_scoring(const Move& m, const int& depth=1){
     // forward moves are scored higher
     // king safety -> castling moves or moving away from checks
     // central control
