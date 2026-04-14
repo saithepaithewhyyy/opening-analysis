@@ -346,11 +346,11 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
 
     sort(legal.begin(), legal.end(), [](auto &a, auto &b){ return a.second > b.second });
     
+    legal.resize(min((int)legal.size(), topk));     
     auto it = lower_bound(legal.begin(), legal.end(), 0.0, [](auto &p, double val){ return p.second > val; });
     legal.erase(it, legal.end());
     
     if(legal.size()){
-        legal.resize(min((int)legal.size(), topk));     
         double sum = accumulate(legal.begin(), legal.end(), 0.0, [](double s, auto &p){ return s + p.second; });
         for (auto &p : legal) if (sum) p.second /= sum;
     }
