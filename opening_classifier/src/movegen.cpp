@@ -179,7 +179,7 @@ Board apply_move(const Board& b, const Move& m) {
 }
 
 
-double move_score_heuristics(const Move& m, const int& depth=5){
+double move_scoring(const Move& m, const int& depth=5){
     // forward moves are scored higher
     // king safety -> castling moves or moving away from checks
     // central control
@@ -214,7 +214,7 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
         Board after = apply_move(b, m);
         int ksq = lsb(after.bb[us][KING]);
         if (!is_attacked(after, ksq, enemy))
-            legal.push_back({m, move_score_heuristics(m, depth)});
+            legal.push_back({m, move_scoring(m, depth)});
     };
 
     // pawnies
