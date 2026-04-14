@@ -88,7 +88,7 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
 
             if (depth >= max_depth) continue;
 
-            auto scored_moves = generate_legal_scored_moves(board);
+            auto scored_moves = generate_legal_scored_moves(board, depth);
             int  n = (int)scored_moves.size();
             if  (n == 0) continue;
 
