@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <algorithm>
 
 using namespace std;
 
@@ -177,9 +178,18 @@ Board apply_move(const Board& b, const Move& m) {
     return n;
 }
 
-vector<Move> generate_legal_moves(const Board& b) {
+
+double move_score_heuristics(const Move& m){
+    double score;
+
+
+
+    return score;
+}
+
+vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int& topk=5) {
     init_tables();
-    vector<Move> legal;
+    vector <pair<Move, double>> legal;
     legal.reserve(64);
 
     Color us  = b.turn;
@@ -192,7 +202,7 @@ vector<Move> generate_legal_moves(const Board& b) {
         Board after = apply_move(b, m);
         int ksq = lsb(after.bb[us][KING]);
         if (!is_attacked(after, ksq, enemy))
-            legal.push_back(m);
+            legal.push_back({m, move_score_heuristics(m)});
     };
 
     // pawnies
@@ -332,6 +342,17 @@ vector<Move> generate_legal_moves(const Board& b) {
                 !is_attacked(b,60,enemy) && !is_attacked(b,59,enemy) && !is_attacked(b,58,enemy))
                 try_add({60,58,(uint8_t)NO_PIECE,true,false});
         }
+    }
+
+    sort(legal.begin(), legal.end(), [](auto &a, auto &b){ return a.second > b.second });
+    
+    auto it = lower_bound(legal.begin(), legal.end(), 0.0, [](auto &p, double val){ return p.second > val; });
+    legal.erase(it, legal.end());
+    
+    if(legal.size()){
+        legal.resize(min((int)legal.size(), topk));     
+        double sum = accumulate(legal.begin(), legal.end(), 0.0, [](double s, auto &p){ return s + p.second; });
+        for (auto &p : legal) if (sum) p.second /= sum;
     }
 
     return legal;

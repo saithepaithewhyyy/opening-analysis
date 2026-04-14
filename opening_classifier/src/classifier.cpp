@@ -88,14 +88,16 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
 
             if (depth >= max_depth) continue;
 
-            auto moves = generate_legal_moves(board);
-            int  n = (int)moves.size();
+            auto scored_moves = generate_legal_scored_moves(board);
+            int  n = (int)scored_moves.size();
             if  (n == 0) continue;
 
             double child_lp = lp - log((double)n);
             if (child_lp < min_log_prob) continue;
 
-            for (auto& mv : moves) {
+            for (auto& scored_move : scored_moves) {
+                Move mv = scored_move.first;
+                double score = scored_move.second;
                 Board child = apply_move(board, mv);
                 uint64_t czh = child.zobrist;
 
