@@ -179,7 +179,7 @@ Board apply_move(const Board& b, const Move& m) {
 }
 
 
-double move_scoring(const Move& m, const int& depth=1){
+double move_scoring(const Move& m, const Board& before, const Board& after, const int& depth=1){
     // forward moves are scored higher
     // king safety -> castling moves or moving away from checks
     // central control
@@ -191,8 +191,20 @@ double move_scoring(const Move& m, const int& depth=1){
     // REINFORCE MOVES SO THAT WE NEVER HIT THE SAME HASH AGAIN!
 
     double score = 1.0;
+    Color us = before.turn;
+    Color them = (Color)(1 - us);
+    uint8_t from = m.from;
+    uint8_t to = m.to;
 
 
+    Piece p = NO_PIECE;
+
+    for(int i=1;i<6;i++){
+        if( before.bb[us][i] && 1ULL << from){
+            p = (Piece)i;
+            break;
+        }
+    }
 
     return score;
 }
@@ -214,7 +226,7 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
         Board after = apply_move(b, m);
         int ksq = lsb(after.bb[us][KING]);
         if (!is_attacked(after, ksq, enemy))
-            legal.push_back({m, move_scoring(m, depth)});
+            legal.push_back({m, move_scoring(m, b, after, depth)});
     };
 
     // pawnies
