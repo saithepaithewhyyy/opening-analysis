@@ -196,15 +196,40 @@ double move_scoring(const Move& m, const Board& before, const Board& after, cons
     uint8_t from = m.from;
     uint8_t to = m.to;
 
-
     Piece p = NO_PIECE;
 
+    if(m.is_castle){
+        score*=5;
+        return score;
+    }
+    
     for(int i=1;i<6;i++){
         if( before.bb[us][i] && 1ULL << from){
             p = (Piece)i;
             break;
         }
     }
+
+    
+    switch(p){
+        case (Piece) KING:
+            bool in_check = is_attacked(before, lsb(after.bb[us][KING]), them); 
+            if ( (m.from >> 3) == (m.to >> 3) ) in_check ? score*=3 : score*=2;
+            else in_check ? score*=1 : score*=0;
+            break;
+        case (Piece) PAWN:
+            break;
+        case (Piece) KNIGHT:
+            break;
+        case (Piece) BISHOP:
+            break;
+        case (Piece) ROOK:
+            break;
+        case (Piece) QUEEN:
+            break;
+        
+    }
+
 
     return score;
 }
