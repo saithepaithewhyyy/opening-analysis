@@ -23,6 +23,17 @@ static uint64_t RAY[64][8];
 
 static const int DIR[8] = {8, -8, 1, -1, 9, 7, -9, -7};
 
+static const double KNIGHT_SQ_TBL[64] = {
+    0.250, 0.375, 0.500, 0.500, 0.500, 0.500, 0.375, 0.250,
+    0.375, 0.500, 0.750, 0.750, 0.750, 0.750, 0.500, 0.375,
+    0.500, 0.750, 1.000, 1.000, 1.000, 1.000, 0.750, 0.500,
+    0.500, 0.750, 1.000, 1.000, 1.000, 1.000, 0.750, 0.500,
+    0.500, 0.750, 1.000, 1.000, 1.000, 1.000, 0.750, 0.500,
+    0.500, 0.750, 1.000, 1.000, 1.000, 1.000, 0.750, 0.500,
+    0.375, 0.500, 0.750, 0.750, 0.750, 0.750, 0.500, 0.375,
+    0.250, 0.375, 0.500, 0.500, 0.500, 0.500, 0.375, 0.250,
+};
+
 // static bool tables_ready = false;
 
 static void init_tables() {
@@ -145,9 +156,9 @@ Board apply_move(const Board& b, const Move& m) {
     
 
     if (m.is_castle) {
-        bool ks       = (m.to > m.from);
-        int  rfrom    = ks ? m.from + 3 : m.from - 4;
-        int  rto      = ks ? m.from + 1 : m.from - 1;
+        bool ks = (m.to > m.from);
+        int rfrom = ks ? m.from + 3 : m.from - 4;
+        int rto = ks ? m.from + 1 : m.from - 1;
         
         n.bb[b.turn][ROOK] &= ~(1ULL << rfrom);
         n.occupied &= ~(1ULL << rfrom);
@@ -190,48 +201,51 @@ double move_scoring(const Move& m, const Board& before, const Board& after, cons
     // exponential scoring of each as move counts
     // REINFORCE MOVES SO THAT WE NEVER HIT THE SAME HASH AGAIN!
 
-    double score = 1.0;
+    vector<double> score(6, 1.0);
     Color us = before.turn;
     Color them = (Color)(1 - us);
     uint8_t from = m.from;
     uint8_t to = m.to;
 
     Piece p = NO_PIECE;
-
-    if(m.is_castle){
-        score*=5;
-        return score;
-    }
     
-    for(int i=1;i<6;i++){
-        if( before.bb[us][i] && 1ULL << from){
+    for(int i=0;i<6;i++){
+        if( before.bb[us][i] & (1ULL << from)){
             p = (Piece)i;
             break;
         }
     }
 
-    
     switch(p){
-        case (Piece) KING:
-            bool in_check = is_attacked(before, lsb(after.bb[us][KING]), them); 
-            if ( (m.from >> 3) == (m.to >> 3) ) in_check ? score*=3 : score*=2;
-            else in_check ? score*=1 : score*=0;
+        case (Piece) KING: {
+            bool in_check = is_attacked(before, lsb(before.bb[us][KING]), them);
+            if ( m.is_castle ) score[0]*=5;
+            else if ( (m.from >> 3) == (m.to >> 3) ) in_check ? score[0]*=3 : score[0]*=2;
+            else in_check ? score[0]*=1 : score[0]*=0.5;
             break;
-        case (Piece) PAWN:
+        }
+        case (Piece) PAWN: {
             break;
-        case (Piece) KNIGHT:
+        }
+        case (Piece) KNIGHT: {
+            int sq = (us == WHITE) ? to : (to ^ 56);
+            double pst = (KNIGHT_SQ_TBL[sq] - 0.25) / (1.0 - 0.25) * 5.0;
+            score[2] *= pst;
             break;
-        case (Piece) BISHOP:
+        }
+        case (Piece) BISHOP: {
             break;
-        case (Piece) ROOK:
+        }
+        case (Piece) ROOK: {
             break;
-        case (Piece) QUEEN:
+        }
+        case (Piece) QUEEN: {
             break;
+        }
         
     }
 
-
-    return score;
+    return accumulate(score.begin(), score.end(), 0.0);
 }
 
 vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int& depth) {
