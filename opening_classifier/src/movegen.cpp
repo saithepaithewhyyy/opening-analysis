@@ -4,8 +4,11 @@
 #include <cstring>
 #include <iostream>
 #include <algorithm>
+#include <numeric>
 
 using namespace std;
+
+const int promos[] = {QUEEN, ROOK, BISHOP, KNIGHT};
 
 static inline int lsb(uint64_t b) { return ctzll(b); }
 static inline int msb(uint64_t b) { return clzll(b); }
@@ -212,16 +215,7 @@ Board apply_move(const Board& b, const Move& m) {
 }
 
 
-double move_scoring(const Move& m, const Board& before, const Board& after, const int& depth=1){
-    // forward moves are scored higher
-    // king safety -> castling moves or moving away from checks
-    // central control
-    // developing moves
-    // early queen moves - discouraged
-    // rook connect
-    // flank pawn pushes/pawn gambits
-    // exponential scoring of each as move counts
-    // REINFORCE MOVES SO THAT WE NEVER HIT THE SAME HASH AGAIN!
+double move_scoring(const Move& m, const Board& before, const Board& after, const int& depth){
 
     vector<double> score(6, 5.0);
     score[0] = 0;
@@ -243,17 +237,20 @@ double move_scoring(const Move& m, const Board& before, const Board& after, cons
         case (Piece) KING: {
             bool in_check = is_attacked(before, lsb(before.bb[us][KING]), them);
             if ( m.is_castle ) score[0]=5;
-            else in_check ? score[0]=-1 : score[0]=-5;
+            else in_check ? score[(int)p]=0.5 : score[(int)p]=0.1;
             break;
         }
-        case (Piece) KNIGHT || BISHOP: {
+        case (Piece) PAWN:
+        case (Piece) KNIGHT:
+        case (Piece) BISHOP: {
             int to_sq = (us == WHITE) ? to : (to ^ 56);
             int from_sq = (us == WHITE) ? from : (from ^ 56);
-            if(p == (Piece) KNIGHT) score[2] *= (KNIGHT_SQ_TBL[to_sq] - KNIGHT_SQ_TBL[from_sq]) / (1.0 - 0.25);
-            else score[3] *= (BISHOP_SQ_TBL[to_sq] - BISHOP_SQ_TBL[from_sq]) / (1.0 - 0.25);
-            break;
-        }
-        case (Piece) PAWN: {
+
+            const double* PST = (p == (Piece) KNIGHT) ? KNIGHT_SQ_TBL : (p == (Piece) BISHOP) ? BISHOP_SQ_TBL : PAWN_SQ_TBL;
+
+            double raw = (PST[to_sq] - 0.25) / 0.75;
+            double improve = max(0.0, (PST[to_sq] - PST[from_sq]) / 0.75);
+            score[(int)p] *= (0.7 * raw + 0.3 * improve);
             break;
         }
     }
@@ -297,7 +294,7 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
             int to = sq + push_dir;
             if (to >= 0 && to < 64 && !(b.occupied & (1ULL << to))) {
                 if ((to >> 3) == promo_rank) {
-                    for (int pr : {QUEEN, ROOK, BISHOP, KNIGHT})
+                    for (int pr : promos)
                         try_add({(uint8_t)sq,(uint8_t)to,(uint8_t)pr,false,false});
                 } else {
                     try_add({(uint8_t)sq,(uint8_t)to,(uint8_t)NO_PIECE,false,false});
@@ -315,7 +312,7 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
             while (atk) {
                 int t = lsb(atk); atk &= atk-1;
                 if ((t >> 3) == promo_rank) {
-                    for (int pr : {QUEEN, ROOK, BISHOP, KNIGHT})
+                    for (int pr : promos)
                         try_add({(uint8_t)sq,(uint8_t)t,(uint8_t)pr,false,false});
                 } else {
                     try_add({(uint8_t)sq,(uint8_t)t,(uint8_t)NO_PIECE,false,false});
@@ -414,22 +411,26 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
                 !is_attacked(b,60,enemy) && !is_attacked(b,61,enemy) && !is_attacked(b,62,enemy))
                 try_add({60,62,(uint8_t)NO_PIECE,true,false});
             if ((b.castling & 0x1) &&
-                !(b.occupied & 0xE00000000000000ULL) &&
+                !(b.occupied & 0xE000000000000000ULL) &&
                 !is_attacked(b,60,enemy) && !is_attacked(b,59,enemy) && !is_attacked(b,58,enemy))
                 try_add({60,58,(uint8_t)NO_PIECE,true,false});
         }
     }
 
-    sort(legal.begin(), legal.end(), [](auto &a, auto &b){ return a.second > b.second });
+    sort(legal.begin(), legal.end(), [](auto &a, auto &b){ return a.second > b.second; });
+
+    legal.erase(
+        remove_if(legal.begin(), legal.end(),
+            [](const pair<Move,double>& p) {
+                return p.second <= 0.0;
+            }),
+        legal.end()
+    );
+
+    double sum = accumulate(legal.begin(), legal.end(), 0.0, [](double s, auto &p){ return s + p.second; });
+    for (auto &p : legal) if (sum) p.second /= sum;
     
     legal.resize(min((int)legal.size(), topk));     
-    auto it = lower_bound(legal.begin(), legal.end(), 0.0, [](auto &p, double val){ return p.second > val; });
-    legal.erase(it, legal.end());
-    
-    if(legal.size()){
-        double sum = accumulate(legal.begin(), legal.end(), 0.0, [](double s, auto &p){ return s + p.second; });
-        for (auto &p : legal) if (sum) p.second /= sum;
-    }
 
     return legal;
 }
