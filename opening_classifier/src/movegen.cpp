@@ -5,6 +5,7 @@
 #include <iostream>
 #include <algorithm>
 #include <numeric>
+#include <mutex>
 
 using namespace std;
 
@@ -59,50 +60,53 @@ static const double PAWN_SQ_TBL[64] = {
     0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50
 };
 
-// static bool tables_ready = false;
+static bool tables_ready = false;
 
 static void init_tables() {
+    static std::once_flag flag;
     // if (tables_ready) return;
-    for (int sq = 0; sq < 64; sq++) {
-        
-        uint64_t b = 1ULL << sq;
+    std::call_once(flag, []() {
+        for (int sq = 0; sq < 64; sq++) {
+            
+            uint64_t b = 1ULL << sq;
 
-        // knight
-        KNIGHT_ATK[sq] =
-            ((b<<17)&~0x0101010101010101ULL) | ((b<<15)&~0x8080808080808080ULL) |
-            ((b<<10)&~0x0303030303030303ULL) | ((b<< 6)&~0xC0C0C0C0C0C0C0C0ULL) |
-            ((b>>17)&~0x8080808080808080ULL) | ((b>>15)&~0x0101010101010101ULL) |
-            ((b>>10)&~0xC0C0C0C0C0C0C0C0ULL) | ((b>> 6)&~0x0303030303030303ULL);
+            // knight
+            KNIGHT_ATK[sq] =
+                ((b<<17)&~0x0101010101010101ULL) | ((b<<15)&~0x8080808080808080ULL) |
+                ((b<<10)&~0x0303030303030303ULL) | ((b<< 6)&~0xC0C0C0C0C0C0C0C0ULL) |
+                ((b>>17)&~0x8080808080808080ULL) | ((b>>15)&~0x0101010101010101ULL) |
+                ((b>>10)&~0xC0C0C0C0C0C0C0C0ULL) | ((b>> 6)&~0x0303030303030303ULL);
 
-        // king
-        uint64_t kb = b;
-        kb |= (b<<8)|(b>>8);
-        kb |= ((kb & ~0x0101010101010101ULL) >> 1) |
-              ((kb & ~0x8080808080808080ULL) << 1);
-        KING_ATK[sq] = kb & ~b;
+            // king
+            uint64_t kb = b;
+            kb |= (b<<8)|(b>>8);
+            kb |= ((kb & ~0x0101010101010101ULL) >> 1) |
+                ((kb & ~0x8080808080808080ULL) << 1);
+            KING_ATK[sq] = kb & ~b;
 
-        // pawns
-        PAWN_ATK[WHITE][sq] =
-            ((b & ~0x0101010101010101ULL) << 7) |
-            ((b & ~0x8080808080808080ULL) << 9);
-        PAWN_ATK[BLACK][sq] =
-            ((b & ~0x8080808080808080ULL) >> 7) |
-            ((b & ~0x0101010101010101ULL) >> 9);
+            // pawns
+            PAWN_ATK[WHITE][sq] =
+                ((b & ~0x0101010101010101ULL) << 7) |
+                ((b & ~0x8080808080808080ULL) << 9);
+            PAWN_ATK[BLACK][sq] =
+                ((b & ~0x8080808080808080ULL) >> 7) |
+                ((b & ~0x0101010101010101ULL) >> 9);
 
-        // rays
-        for (int d = 0; d < 8; d++) {
-            RAY[sq][d] = 0;
-            int cur = sq;
-            while (true) {
-                int file = cur & 7, rank = cur >> 3;
-                int nf = file + (d==2||d==4||d==5 ? 1 : d==3||d==6||d==7 ? -1 : 0);
-                int nr = rank + (d==0||d==4||d==6 ? 1 : d==1||d==5||d==7 ? -1 : 0);
-                if (nf < 0||nf > 7||nr < 0||nr > 7) break;
-                cur = nr*8 + nf;
-                RAY[sq][d] |= (1ULL << cur);
+            // rays
+            for (int d = 0; d < 8; d++) {
+                RAY[sq][d] = 0;
+                int cur = sq;
+                while (true) {
+                    int file = cur & 7, rank = cur >> 3;
+                    int nf = file + (d==2||d==4||d==5 ? 1 : d==3||d==6||d==7 ? -1 : 0);
+                    int nr = rank + (d==0||d==4||d==6 ? 1 : d==1||d==5||d==7 ? -1 : 0);
+                    if (nf < 0||nf > 7||nr < 0||nr > 7) break;
+                    cur = nr*8 + nf;
+                    RAY[sq][d] |= (1ULL << cur);
+                }
             }
         }
-    }
+    });
     // tables_ready = true;
 }
 
@@ -151,6 +155,100 @@ static bool is_attacked(const Board& b, int sq, Color enemy) {
     if (cross & (b.bb[enemy][ROOK]   | b.bb[enemy][QUEEN])) return true;
     return false;
 }
+
+// Board apply_move(const Board& b, const Move& m) {
+//     Board n = b;
+//     Color enemy = (Color)(1 - b.turn);
+
+//     Piece pc = NO_PIECE;
+//     for (int p = 0; p < 6; p++)
+//         if (b.bb[b.turn][p] & (1ULL << m.from)) { pc = (Piece)p; break; }
+
+//     Piece captured = NO_PIECE;
+//     if (!m.is_ep)
+//         for (int p = 0; p < 6; p++)
+//             if (b.bb[enemy][p] & (1ULL << m.to)) { captured = (Piece)p; break; }
+
+
+//     n.bb[b.turn][pc] &= ~(1ULL << m.from);
+//     n.occupied       &= ~(1ULL << m.from);
+
+//     if (m.is_ep) {
+//         int cap = m.to + (b.turn == WHITE ? -8 : 8);
+//         n.bb[enemy][PAWN] &= ~(1ULL << cap);
+//         n.occupied        &= ~(1ULL << cap);
+//     }
+
+//     for (int p = 0; p < 6; p++)
+//         n.bb[enemy][p] &= ~(1ULL << m.to);
+
+//     Piece placed = (m.promotion != NO_PIECE) ? (Piece)m.promotion : pc;
+//     n.bb[b.turn][placed] |= (1ULL << m.to);
+//     n.occupied |= (1ULL << m.to);
+//     int castle_rfrom = -1, castle_rto = -1;
+//     if (m.is_castle) {
+//         bool ks = (m.to > m.from);
+//         castle_rfrom = ks ? m.from + 3 : m.from - 4;
+//         castle_rto = ks ? m.from + 1 : m.from - 1;
+//         n.bb[b.turn][ROOK] &= ~(1ULL << castle_rfrom);
+//         n.occupied &= ~(1ULL << castle_rfrom);
+//         n.bb[b.turn][ROOK] |=  (1ULL << castle_rto);
+//         n.occupied |=  (1ULL << castle_rto);
+//     }
+
+//     // Update castling rights
+//     auto clear = [&](int s) {
+//         if (s == 0)  n.castling &= ~0x4;
+//         if (s == 7)  n.castling &= ~0x8;
+//         if (s == 56) n.castling &= ~0x1;
+//         if (s == 63) n.castling &= ~0x2;
+//         if (s == 4)  n.castling &= ~0xC;
+//         if (s == 60) n.castling &= ~0x3;
+//     };
+//     clear(m.from);
+//     clear(m.to);
+
+//     n.ep_sq = 255;
+//     if (pc == PAWN && abs((int)m.to - (int)m.from) == 16)
+//         n.ep_sq = (m.from + m.to) / 2;
+
+//     n.turn = enemy;
+
+//     // --- Incremental Zobrist (replaces compute_zobrist) ---
+//     uint64_t z = b.zobrist;
+
+//     // Remove old state contributions
+//     z ^= ZT.castling[b.castling & 0xF];
+//     if (b.ep_sq != 255) z ^= ZT.ep_file[b.ep_sq & 7];
+
+//     // Moving piece: lift from source, place at destination
+//     z ^= ZT.piece[b.turn][pc][m.from];
+//     z ^= ZT.piece[b.turn][placed][m.to];
+
+//     // Normal capture
+//     if (captured != NO_PIECE)
+//         z ^= ZT.piece[enemy][captured][m.to];
+
+//     // En passant capture
+//     if (m.is_ep) {
+//         int cap = m.to + (b.turn == WHITE ? -8 : 8);
+//         z ^= ZT.piece[enemy][PAWN][cap];
+//     }
+
+//     // Castling rook movement
+//     if (m.is_castle) {
+//         z ^= ZT.piece[b.turn][ROOK][castle_rfrom];
+//         z ^= ZT.piece[b.turn][ROOK][castle_rto];
+//     }
+
+//     // Apply new state contributions
+//     z ^= ZT.castling[n.castling & 0xF];
+//     if (n.ep_sq != 255) z ^= ZT.ep_file[n.ep_sq & 7];
+//     z ^= ZT.black_to_move;  // turn always flips, so always toggle unconditionally
+
+//     n.zobrist = z;
+//     return n;
+// }
 
 Board apply_move(const Board& b, const Move& m) {
     Board n = b;

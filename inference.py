@@ -79,7 +79,7 @@ if __name__ == "__main__":
     engine = cc.ClassifierEngine()
     engine.load_eco(rows)
     engine.load_priors(priors)
-    engine.build_index(max_depth=10)
+    engine.build_index(max_depth=3)
     save_path = "index.bin"
     engine.save_index(save_path)
 
@@ -88,9 +88,10 @@ if __name__ == "__main__":
 
     # Sicialian Dragon (Accelerated) B34
     classify("r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 1 5")
+    print("\n")
     # # Nimzo Larsen Attack: Modern Variation
     classify("rnbqkbnr/pppp1ppp/8/4p3/8/1P6/P1PPPPPP/RNBQKBNR w KQkq - 0 2")
+    print("\n")
     # Scandivanian Defence, Modern Variation B02
     classify("rnbqkb1r/ppp1pppp/5n2/3P4/8/2N5/PPPP1PPP/R1BQKBNR b KQkq - 2 3")
-
-    classify("r1bq1rk1/ppppbppp/2n2n2/4p1B1/2B1P3/2PP1N2/PP3PPP/RN1Q1RK1 w - - 5 8")
+    print("\n")

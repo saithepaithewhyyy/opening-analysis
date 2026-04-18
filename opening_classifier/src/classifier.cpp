@@ -8,6 +8,8 @@
 #include <iostream>
 #include <ctime>
 #include <chrono>
+#include <omp.h>
+#include <atomic>
 
 using namespace std;
 
@@ -48,23 +50,26 @@ void ClassifierEngine::load_priors(const unordered_map<string, double>& priors)
     }
 }
 
-
 void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     reach_index_.clear();
-    
-    int total = (int)roots_.size();
-    int done  = 0;
 
-    cout << "Build Index BFS initiated with " << total << " ECO's" << " with max depth " << max_depth << endl;
-    auto start = chrono::steady_clock::now();
-    for (auto& root : roots_) {
-        // BFS  
-        struct Node {
-            Board  board;
-            double log_prob;
-            int    depth;
-        };
-        
+    Board start = board_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    generate_legal_scored_moves(start, 0);
+
+    int total = (int)roots_.size();
+    int nthreads = omp_get_max_threads();
+
+    cout << "Build Index BFS initiated with " << total << " ECOs" << " across " << nthreads << " threads\n";
+
+    vector<unordered_map<uint64_t, vector<ReachEntry>>> local_indices(nthreads);
+
+    atomic<int> done{0};
+    auto wall_start = chrono::steady_clock::now();
+
+    #pragma omp parallel for schedule(dynamic, 1)
+    for (int i = 0; i < total; i++) {
+        const auto& root = roots_[i];
+        struct Node { Board board; double log_prob; int depth; };
 
         unordered_map<uint64_t, double> visited;
         visited[root.board.zobrist] = 0.0;
@@ -101,8 +106,8 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
                 prob_acc[czh] += exp(child_lp);
                 
                 if (!shortest.count(czh))
-                shortest[czh] = depth + 1;
-                
+                    shortest[czh] = depth + 1;
+
                 auto vit = visited.find(czh);
                 if (vit == visited.end() || vit->second < child_lp) {
                     visited[czh] = child_lp;
@@ -111,27 +116,115 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
             }
         }
 
+        int tid = omp_get_thread_num();
         for (auto& [zh, prob] : prob_acc) {
-            reach_index_[zh].push_back({
-                root.eco,
-                prob,
-                shortest.count(zh) ? shortest.at(zh) : -1
-            });
+            local_indices[tid][zh].push_back({ root.eco, prob, shortest.count(zh) ? shortest.at(zh) : -1});
         }
 
-        done++;        
-
-        auto now = chrono::steady_clock::now();
-        double elapsed = chrono::duration<double>(now - start).count();
-        double rate = done / elapsed;
-        double remaining = (total - done) / rate;
-
-        cout << "\rProgress: " << done << "/" << total
-            << " | ETA: " << int(remaining) << "s" << flush;
+        int n_done = ++done;
+        #pragma omp critical
+        {
+            auto now    = chrono::steady_clock::now();
+            double elapsed   = chrono::duration<double>(now - wall_start).count();
+            double rate      = n_done / elapsed;
+            double remaining = (total - n_done) / rate;
+            cout << "\rProgress: " << n_done << "/" << total
+                 << " | ETA: " << int(remaining) << "s   " << flush;
+        }
     }
+
+    cout << "\nMerging thread results...\n";
+    for (auto& local : local_indices)
+        for (auto& [zh, entries] : local)
+            for (auto& e : entries)
+                reach_index_[zh].push_back(e);
 
     cout << "Index built. " << reach_index_.size() << " unique positions indexed.\n";
 }
+
+// void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
+//     reach_index_.clear();
+    
+//     int total = (int)roots_.size();
+//     int done  = 0;
+
+//     cout << "Build Index BFS initiated with " << total << " ECO's" << " with max depth " << max_depth << endl;
+//     auto start = chrono::steady_clock::now();
+//     for (auto& root : roots_) {
+//         // BFS  
+//         struct Node {
+//             Board  board;
+//             double log_prob;
+//             int    depth;
+//         };
+        
+
+//         unordered_map<uint64_t, double> visited;
+//         visited[root.board.zobrist] = 0.0;
+
+//         queue<Node> q;
+//         q.push({root.board, 0.0, 0});
+
+//         unordered_map<uint64_t, double> prob_acc;
+//         unordered_map<uint64_t, int> shortest;
+
+//         prob_acc[root.board.zobrist] = 1.0;
+//         shortest[root.board.zobrist] = 0;
+
+//         while (!q.empty()) {
+//             auto [board, lp, depth] = q.front();
+//             q.pop();
+
+//             if (depth >= max_depth) continue;
+
+//             auto scored_moves = generate_legal_scored_moves(board, depth);
+//             int  n = (int)scored_moves.size();
+//             if  (n == 0) continue;
+
+            
+//             for (auto& scored_move : scored_moves) {
+//                 Move mv = scored_move.first;
+//                 double score = scored_move.second;
+//                 Board child = apply_move(board, mv);
+//                 uint64_t czh = child.zobrist;
+                
+//                 double child_lp = lp - log(score);
+//                 if (child_lp < min_log_prob) continue;
+
+//                 prob_acc[czh] += exp(child_lp);
+                
+//                 if (!shortest.count(czh))
+//                 shortest[czh] = depth + 1;
+                
+//                 auto vit = visited.find(czh);
+//                 if (vit == visited.end() || vit->second < child_lp) {
+//                     visited[czh] = child_lp;
+//                     q.push({child, child_lp, depth + 1});
+//                 }
+//             }
+//         }
+
+//         for (auto& [zh, prob] : prob_acc) {
+//             reach_index_[zh].push_back({
+//                 root.eco,
+//                 prob,
+//                 shortest.count(zh) ? shortest.at(zh) : -1
+//             });
+//         }
+
+//         done++;        
+
+//         auto now = chrono::steady_clock::now();
+//         double elapsed = chrono::duration<double>(now - start).count();
+//         double rate = done / elapsed;
+//         double remaining = (total - done) / rate;
+
+//         cout << "\rProgress: " << done << "/" << total
+//             << " | ETA: " << int(remaining) << "s" << flush;
+//     }
+
+//     cout << "Index built. " << reach_index_.size() << " unique positions indexed.\n";
+// }
 
 
 vector<ScoredOpening> ClassifierEngine::classify( const string& fen, int top_n) const{
