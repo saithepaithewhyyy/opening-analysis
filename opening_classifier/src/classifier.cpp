@@ -50,16 +50,12 @@ void ClassifierEngine::load_priors(const unordered_map<string, double>& priors)
 
 
 void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
-    
-    time_t now = time(nullptr); 
-    char* dt = ctime(&now);  
-    
     reach_index_.clear();
     
     int total = (int)roots_.size();
     int done  = 0;
 
-    cout << dt << "Build Index BFS initiated with " << total << "ECO's" << endl;
+    cout << "Build Index BFS initiated with " << total << " ECO's" << " with max depth " << max_depth << endl;
     auto start = chrono::steady_clock::now();
     for (auto& root : roots_) {
         // BFS  
