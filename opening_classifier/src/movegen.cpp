@@ -34,6 +34,28 @@ static const double KNIGHT_SQ_TBL[64] = {
     0.250, 0.375, 0.500, 0.500, 0.500, 0.500, 0.375, 0.250,
 };
 
+static const double BISHOP_SQ_TBL[64] = {
+    0.55, 0.70, 0.70, 0.70, 0.70, 0.70, 0.70, 0.55,
+    0.70, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 0.70,
+    0.70, 0.85, 0.925,1.00, 1.00, 0.925,0.85, 0.70,
+    0.70, 0.925,0.925,1.00, 1.00, 0.925,0.925,0.70,
+    0.70, 0.85, 1.00, 1.00, 1.00, 1.00, 0.85, 0.70,
+    0.70, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 0.70,
+    0.70, 0.925,0.85, 0.85, 0.85, 0.85, 0.925,0.70,
+    0.55, 0.70, 0.25, 0.70, 0.70, 0.25, 0.70, 0.55
+};
+
+static const double PAWN_SQ_TBL[64] = {
+    0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50,
+    1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00,
+    0.60, 0.60, 0.70, 0.80, 0.80, 0.70, 0.60, 0.60,
+    0.55, 0.55, 0.60, 0.77, 0.77, 0.60, 0.55, 0.55,
+    0.50, 0.50, 0.50, 0.75, 0.75, 0.50, 0.50, 0.50,
+    0.55, 0.45, 0.40, 0.50, 0.50, 0.40, 0.45, 0.55,
+    0.55, 0.60, 0.60, 0.25, 0.25, 0.60, 0.60, 0.55,
+    0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50
+};
+
 // static bool tables_ready = false;
 
 static void init_tables() {
@@ -201,7 +223,8 @@ double move_scoring(const Move& m, const Board& before, const Board& after, cons
     // exponential scoring of each as move counts
     // REINFORCE MOVES SO THAT WE NEVER HIT THE SAME HASH AGAIN!
 
-    vector<double> score(6, 1.0);
+    vector<double> score(6, 5.0);
+    score[0] = 0;
     Color us = before.turn;
     Color them = (Color)(1 - us);
     uint8_t from = m.from;
@@ -219,30 +242,20 @@ double move_scoring(const Move& m, const Board& before, const Board& after, cons
     switch(p){
         case (Piece) KING: {
             bool in_check = is_attacked(before, lsb(before.bb[us][KING]), them);
-            if ( m.is_castle ) score[0]*=5;
-            else if ( (m.from >> 3) == (m.to >> 3) ) in_check ? score[0]*=3 : score[0]*=2;
-            else in_check ? score[0]*=1 : score[0]*=0.5;
+            if ( m.is_castle ) score[0]=5;
+            else in_check ? score[0]=-1 : score[0]=-5;
+            break;
+        }
+        case (Piece) KNIGHT || BISHOP: {
+            int to_sq = (us == WHITE) ? to : (to ^ 56);
+            int from_sq = (us == WHITE) ? from : (from ^ 56);
+            if(p == (Piece) KNIGHT) score[2] *= (KNIGHT_SQ_TBL[to_sq] - KNIGHT_SQ_TBL[from_sq]) / (1.0 - 0.25);
+            else score[3] *= (BISHOP_SQ_TBL[to_sq] - BISHOP_SQ_TBL[from_sq]) / (1.0 - 0.25);
             break;
         }
         case (Piece) PAWN: {
             break;
         }
-        case (Piece) KNIGHT: {
-            int sq = (us == WHITE) ? to : (to ^ 56);
-            double pst = (KNIGHT_SQ_TBL[sq] - 0.25) / (1.0 - 0.25) * 5.0;
-            score[2] *= pst;
-            break;
-        }
-        case (Piece) BISHOP: {
-            break;
-        }
-        case (Piece) ROOK: {
-            break;
-        }
-        case (Piece) QUEEN: {
-            break;
-        }
-        
     }
 
     return accumulate(score.begin(), score.end(), 0.0);
