@@ -530,5 +530,5 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
     
     // legal.resize(min((int)legal.size(), topk));     
 
-    // return legal;
+    return legal;
 }
