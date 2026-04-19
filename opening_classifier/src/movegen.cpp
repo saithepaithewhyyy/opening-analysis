@@ -316,7 +316,7 @@ Board apply_move(const Board& b, const Move& m) {
 double move_scoring(const Move& m, const Board& before, const Board& after, const int& depth){
 
     vector<double> score(6, 5.0);
-    score[0] = 0;
+    // score[(int) KING] = 0;
     Color us = before.turn;
     Color them = (Color)(1 - us);
     uint8_t from = m.from;
@@ -515,20 +515,21 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
         }
     }
 
-    // sort(legal.begin(), legal.end(), [](auto &a, auto &b){ return a.second > b.second; });
+    sort(legal.begin(), legal.end(), [](auto &a, auto &b){ return a.second > b.second; });
 
-    // legal.erase(
-    //     remove_if(legal.begin(), legal.end(),
-    //         [](const pair<Move,double>& p) {
-    //             return p.second <= 0.0;
-    //         }),
-    //     legal.end()
-    // );
+    legal.erase(
+        remove_if(legal.begin(), legal.end(),
+            [](const pair<Move,double>& p) {
+                return p.second <= 0.0;
+            }),
+        legal.end()
+    );
 
-    // double sum = accumulate(legal.begin(), legal.end(), 0.0, [](double s, auto &p){ return s + p.second; });
-    // for (auto &p : legal) if (sum) p.second /= sum;
+    double sum = accumulate(legal.begin(), legal.end(), 0.0, [](double s, auto &p){ return s + p.second; });
+    for (auto &p : legal) if (sum) p.second /= sum;
     
-    // legal.resize(min((int)legal.size(), topk));     
+    // legal.resize(min((int)legal.size(), topk));    
+    //  legal.resize(legal.size()/2); 
 
     return legal;
 }

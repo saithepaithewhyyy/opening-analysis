@@ -95,3 +95,12 @@ if __name__ == "__main__":
     # Scandivanian Defence, Modern Variation B02
     classify("rnbqkb1r/ppp1pppp/5n2/3P4/8/2N5/PPPP1PPP/R1BQKBNR b KQkq - 2 3")
     print("\n")
+    # Nimzowitsch Defense: El Columpio Defense, Pin Variation (+1 plies)
+    classify("r1bqkb1r/1pp1pppp/p1np3n/1B2P3/3P4/5N1P/PPP2PP1/RNBQK2R w KQkq - 0 7")
+    print("\n")
+    # Nimzowitsch Defense: El Columpio Defense, Pin Variation (+2 plies)
+    classify("r1bqkb1r/1pp1pppp/p1Bp3n/4P3/3P4/5N1P/PPP2PP1/RNBQK2R b KQkq - 0 7")
+    print("\n")
+    # Nimzowitsch Defense: El Columpio Defense, Pin Variation (+3 plies)
+    classify("r1bqkb1r/2p1pppp/p1pp3n/4P3/3P4/5N1P/PPP2PP1/RNBQK2R w KQkq - 0 8")
+    print("\n")
