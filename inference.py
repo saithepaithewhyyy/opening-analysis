@@ -79,7 +79,7 @@ if __name__ == "__main__":
     engine = cc.ClassifierEngine()
     engine.load_eco(rows)
     engine.load_priors(priors)
-    engine.build_index(max_depth=3)
+    engine.build_index(max_depth=2)
     save_path = "index.bin"
     engine.save_index(save_path)
 

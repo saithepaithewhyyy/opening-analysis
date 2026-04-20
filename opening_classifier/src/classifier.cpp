@@ -52,6 +52,7 @@ void ClassifierEngine::load_priors(const unordered_map<string, double>& priors)
 
 void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     reach_index_.clear();
+    board_zh_.clear();
 
     Board start = board_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     generate_legal_scored_moves(start, 0);
@@ -62,6 +63,8 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     cout << "Build Index BFS initiated with " << total << " ECOs" << " across " << nthreads << " threads\n";
 
     vector<unordered_map<uint64_t, vector<ReachEntry>>> local_indices(nthreads);
+    vector<vector<Board>> local_board_zh(nthreads);
+
 
     atomic<int> done{0};
     auto wall_start = chrono::steady_clock::now();
@@ -86,6 +89,7 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
         while (!q.empty()) {
             auto [board, lp, depth] = q.front();
             q.pop();
+            local_board_zh[omp_get_thread_num()].push_back(board);
 
             if (depth >= max_depth) continue;
 
@@ -138,6 +142,10 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
         for (auto& [zh, entries] : local)
             for (auto& e : entries)
                 reach_index_[zh].push_back(e);
+
+    for (auto& local : local_board_zh)
+        for (auto& entry : local)
+            board_zh_.push_back(entry);
 
     cout << "Index built. " << reach_index_.size() << " unique positions indexed.\n";
 }
@@ -231,6 +239,13 @@ void ClassifierEngine::save_index(const string& path) const {
             f.write(reinterpret_cast<const char*>(&e.path_length), sizeof(e.path_length));
         }
     }
+
+    uint64_t nboard = board_zh_.size();
+    f.write(reinterpret_cast<const char*>(&nboard), sizeof(nboard));
+    for (auto& b : board_zh_) {
+        f.write(reinterpret_cast<const char*>(&b), sizeof(Board));
+    }
+
     cout << "Index saved to " << path << "\n";
 }
 
@@ -241,6 +256,7 @@ void ClassifierEngine::load_index(const string& path) {
     reach_index_.clear();
     all_eco_codes_.clear();
     eco_name_.clear();
+    board_zh_.clear();
 
     uint64_t neco;
     f.read(reinterpret_cast<char*>(&neco), sizeof(neco));
@@ -274,6 +290,13 @@ void ClassifierEngine::load_index(const string& path) {
             f.read(reinterpret_cast<char*>(&path_length), sizeof(path_length));
             reach_index_[zh].push_back({eco, likelihood, path_length});
         }
+    }
+
+    uint64_t nboard;
+    f.read(reinterpret_cast<char*>(&nboard), sizeof(nboard));
+    board_zh_.resize(nboard);
+    for (uint64_t i = 0; i < nboard; i++) {
+        f.read(reinterpret_cast<char*>(&board_zh_[i]), sizeof(Board));
     }
     cout << "Index loaded from " << path
          << " (" << reach_index_.size() << " positions, "

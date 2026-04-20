@@ -47,10 +47,11 @@ private:
 
     vector<EcoRoot> roots_;
     unordered_map<string, double> priors_;
-    double default_prior_ = 0.00133155792;
-    double floor_prior_ = 0.00133155792;
+    double default_prior_ = 0.00027100271;
+    double floor_prior_ = 0.00027100271;
 
     unordered_map<uint64_t, vector<ReachEntry>> reach_index_;
+    vector<Board> board_zh_;
 
     unordered_map<string, string> eco_name_;
     vector<string> all_eco_codes_;

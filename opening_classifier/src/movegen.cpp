@@ -516,16 +516,16 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
         }
     }
 
-    sort(legal.begin(), legal.end(), [](auto &a, auto &b){ return a.second > b.second; });
+    // sort(legal.begin(), legal.end(), [](auto &a, auto &b){ return a.second > b.second; });
 
-    double sum = accumulate(legal.begin(), legal.end(), 0.0, [](double s, auto &p){ return s + p.second; });
-    for (auto &p : legal) if (sum) p.second /= sum;
+    // double sum = accumulate(legal.begin(), legal.end(), 0.0, [](double s, auto &p){ return s + p.second; });
+    // for (auto &p : legal) if (sum) p.second /= sum;
 
-    legal.erase(
-        remove_if(legal.begin(), legal.end(),
-            [](const pair<Move,double>& p) { return p.second < PROB_THRESHOLD; }),
-        legal.end()
-    );
+    // legal.erase(
+    //     remove_if(legal.begin(), legal.end(),
+    //         [](const pair<Move,double>& p) { return p.second < PROB_THRESHOLD; }),
+    //     legal.end()
+    // );
 
     return legal;
 }
