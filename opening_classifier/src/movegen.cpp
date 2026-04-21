@@ -314,47 +314,93 @@ Board apply_move(const Board& b, const Move& m) {
 }
 
 
-double move_scoring(const Move& m, const Board& before, const Board& after, const int& depth){
+// double move_scoring(const Move& m, const Board& before, const Board& after, const int& depth){
 
-    vector<double> score(6, 5.0);
-    // score[(int) KING] = 0;
+//     vector<double> score(6, 5.0);
+//     // score[(int) KING] = 0;
+//     Color us = before.turn;
+//     Color them = (Color)(1 - us);
+//     uint8_t from = m.from;
+//     uint8_t to = m.to;
+
+//     Piece p = NO_PIECE;
+    
+//     for(int i=0;i<6;i++){
+//         if( before.bb[us][i] & (1ULL << from)){
+//             p = (Piece)i;
+//             break;
+//         }
+//     }
+
+//     switch(p){
+//         case (Piece) KING: {
+//             bool in_check = is_attacked(before, lsb(before.bb[us][KING]), them);
+//             if ( m.is_castle ) score[0]=5;
+//             else in_check ? score[(int)p]=0.5 : score[(int)p]=0.1;
+//             break;
+//         }
+//         case (Piece) PAWN:
+//         case (Piece) KNIGHT:
+//         case (Piece) BISHOP: {
+//             int to_sq = (us == WHITE) ? to : (to ^ 56);
+//             int from_sq = (us == WHITE) ? from : (from ^ 56);
+
+//             const double* PST = (p == (Piece) KNIGHT) ? KNIGHT_SQ_TBL : (p == (Piece) BISHOP) ? BISHOP_SQ_TBL : PAWN_SQ_TBL;
+
+//             double raw = (PST[to_sq] - 0.25) / 0.75;
+//             double improve = max(0.0, (PST[to_sq] - PST[from_sq]) / 0.75);
+//             score[(int)p] *= (0.7 * raw + 0.3 * improve);
+//             break;
+//         }
+//     }
+
+//     return accumulate(score.begin(), score.end(), 0.0);
+// }
+
+double move_scoring(const Move& m, const Board& before, const Board& after, const int& depth) {
     Color us = before.turn;
-    Color them = (Color)(1 - us);
-    uint8_t from = m.from;
-    uint8_t to = m.to;
+    uint8_t from = m.from, to = m.to;
 
     Piece p = NO_PIECE;
-    
-    for(int i=0;i<6;i++){
-        if( before.bb[us][i] & (1ULL << from)){
-            p = (Piece)i;
+    for (int i = 0; i < 6; i++)
+        if (before.bb[us][i] & (1ULL << from)) { p = (Piece)i; break; }
+
+    // Base score from PST
+    int to_sq   = (us == WHITE) ? to   : (to   ^ 56);
+    int from_sq = (us == WHITE) ? from : (from ^ 56);
+
+    double score = 0.0;
+
+    switch(p) {
+        case PAWN: {
+            score = PAWN_SQ_TBL[to_sq] * 2.0;  // amplify range
+            // bonus for central pawns (d4/e4/d5/e5)
+            if (to_sq == 27 || to_sq == 28 || to_sq == 35 || to_sq == 36)
+                score *= 2.0;
             break;
         }
+        case KNIGHT:
+        case BISHOP: {
+            const double* PST = (p == KNIGHT) ? KNIGHT_SQ_TBL : BISHOP_SQ_TBL;
+            score = PST[to_sq] * 2.0;
+            // development bonus: reward first move off back rank
+            if (from_sq < 8) score *= 2.5;
+            break;
+        }
+        case ROOK:
+            score = 0.3;  // rare in openings, low base
+            break;
+        case QUEEN:
+            score = (depth < 2) ? 0.1 : 0.5;  // penalize early queen moves
+            break;
+        case KING:
+            score = m.is_castle ? 1.5 : 0.05;
+            break;
+        default:
+            score = 0.1;
     }
 
-    switch(p){
-        case (Piece) KING: {
-            bool in_check = is_attacked(before, lsb(before.bb[us][KING]), them);
-            if ( m.is_castle ) score[0]=5;
-            else in_check ? score[(int)p]=0.5 : score[(int)p]=0.1;
-            break;
-        }
-        case (Piece) PAWN:
-        case (Piece) KNIGHT:
-        case (Piece) BISHOP: {
-            int to_sq = (us == WHITE) ? to : (to ^ 56);
-            int from_sq = (us == WHITE) ? from : (from ^ 56);
-
-            const double* PST = (p == (Piece) KNIGHT) ? KNIGHT_SQ_TBL : (p == (Piece) BISHOP) ? BISHOP_SQ_TBL : PAWN_SQ_TBL;
-
-            double raw = (PST[to_sq] - 0.25) / 0.75;
-            double improve = max(0.0, (PST[to_sq] - PST[from_sq]) / 0.75);
-            score[(int)p] *= (0.7 * raw + 0.3 * improve);
-            break;
-        }
-    }
-
-    return accumulate(score.begin(), score.end(), 0.0);
+    return max(score, 1e-6);  // never exactly zero
 }
 
 vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int& depth) {
@@ -526,6 +572,15 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
     //         [](const pair<Move,double>& p) { return p.second < PROB_THRESHOLD; }),
     //     legal.end()
     // );
+    double sum = accumulate(legal.begin(), legal.end(), 0.0,
+        [](double s, auto& p){ return s + p.second; });
+    for (auto& p : legal) p.second /= sum;
+
+    // Sharpen with temperature
+    static const double TEMP = 0.3;
+    sum = 0.0;
+    for (auto& p : legal) { p.second = exp(p.second / TEMP); sum += p.second; }
+    for (auto& p : legal) p.second /= sum;
 
     return legal;
 }
