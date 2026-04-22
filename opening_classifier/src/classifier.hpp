@@ -24,7 +24,7 @@ struct ReachEntry {
 class ClassifierEngine {
 public:
     static constexpr double EPSILON = 1e-15;
-    static constexpr double MIN_LOG_PROB = -20.0;
+    static constexpr double MIN_LOG_PROB = -10.0;
     static constexpr int MAX_DEPTH = 3;
 
     void load_eco(const vector<tuple<string,string,string>>& rows);
