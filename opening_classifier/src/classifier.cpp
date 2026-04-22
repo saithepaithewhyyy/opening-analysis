@@ -10,6 +10,7 @@
 #include <chrono>
 #include <omp.h>
 #include <atomic>
+#include <numeric>
 
 using namespace std;
 
@@ -57,6 +58,10 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     Board start = board_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     generate_legal_scored_moves(start, 0);
 
+    vector<int> indices(roots_.size());
+    iota(indices.begin(), indices.end(), 0);
+    shuffle(indices.begin(), indices.end(), mt19937(42));
+
     int total = (int)roots_.size();
     int nthreads = omp_get_max_threads();
 
@@ -71,7 +76,7 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
 
     #pragma omp parallel for schedule(dynamic, 1)
     for (int i = 0; i < total; i++) {
-        const auto& root = roots_[i];
+        const auto& root = roots_[indices[i]];
         struct Node { Board board; double log_prob; int depth; };
 
         unordered_map<uint64_t, double> visited;
