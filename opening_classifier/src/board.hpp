@@ -7,6 +7,7 @@
 #include <random>
 
 using namespace std;
+typedef vector<Move> Moves;
 
 enum Piece  { PAWN=0, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_PIECE=6 };
 enum Color  { WHITE=0, BLACK=1 };
