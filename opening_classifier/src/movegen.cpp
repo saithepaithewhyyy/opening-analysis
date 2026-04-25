@@ -1,5 +1,5 @@
 #include "movegen.hpp"
-#include "bltn_ctzll.hpp"
+#include "definitions.hpp"
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
