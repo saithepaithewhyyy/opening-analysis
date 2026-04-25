@@ -134,7 +134,7 @@ namespace Reader {
             BookEntries bookEntries;
             for (entry=entries; entry<entries+num_entries; entry++) {
                 if (u.endian_swap_u64(entry->key) == key && u.endian_swap_u16(entry->weight) >= minimum_weight) {
-                    
+                    move = u.endian_swap_u16(entry->move); 
                     bookMove.from = ((move>>6) & 7) * 8 + ((move>>9) & 7); 
                     bookMove.to = ((move>>0) & 7) * 8 + ((move>>3) & 7);  
                     bookMove.promotion = ((move>>12) & 7); 
