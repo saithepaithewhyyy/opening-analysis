@@ -79,12 +79,15 @@ if __name__ == "__main__":
     engine = cc.ClassifierEngine()
     engine.load_eco(rows)
     engine.load_priors(priors)
-    engine.build_index(max_depth=2)
+    engine.build_index(max_depth=6)
     save_path = "index.bin"
     engine.save_index(save_path)
 
+    # rows, priors = load_data()
     # engine = cc.ClassifierEngine()
+    # save_path = "index.bin"
     # engine.load_index(save_path)
+    # engine.load_priors(priors)
 
     # Sicialian Dragon (Accelerated) B34
     classify("r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 1 5")
@@ -103,4 +106,14 @@ if __name__ == "__main__":
     print("\n")
     # Nimzowitsch Defense: El Columpio Defense, Pin Variation (+3 plies)
     classify("r1bqkb1r/2p1pppp/p1pp3n/4P3/3P4/5N1P/PPP2PP1/RNBQK2R w KQkq - 0 8")
+    print("\n")
+    # depth testing (king pawn/morphy variaton branches)
+    classify("r1bqkbnr/1ppp1ppp/p1n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 1 4")
+    print("\n")
+    classify("r1bqkb1r/1ppp1ppp/p1n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 5")
+    print("\n")
+    classify("r1bqkb1r/1ppp1ppp/p1n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R b KQkq - 0 5")
+    print("\n")
+    # RANDOM
+    classify("rnbqkbnr/1ppp1ppp/8/p3p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3")
     print("\n")

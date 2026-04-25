@@ -16,15 +16,15 @@ struct ScoredOpening {
 };
 
 struct ReachEntry {
-    string eco;
-    double likelihood; 
-    int path_length;
+    uint16_t eco_idx;
+    float likelihood;  
+    uint8_t path_length;
 };
 
 class ClassifierEngine {
 public:
     static constexpr double EPSILON = 1e-15;
-    static constexpr double MIN_LOG_PROB = -10.0;
+    static constexpr double MIN_LOG_PROB = -15.0;
     static constexpr int MAX_DEPTH = 3;
 
     void load_eco(const vector<tuple<string,string,string>>& rows);
@@ -55,4 +55,5 @@ private:
 
     unordered_map<string, string> eco_name_;
     vector<string> all_eco_codes_;
+    unordered_map<string, uint16_t> eco_to_idx_;
 };
