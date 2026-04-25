@@ -27,38 +27,76 @@ static uint64_t PAWN_ATK[2][64];
 static uint64_t RAY[64][8];       
 
 static const int DIR[8] = {8, -8, 1, -1, 9, 7, -9, -7};
+static const double PIECE_VAL[7] = {100, 300, 325, 500, 900, 0, 0};
 
-static const double KNIGHT_SQ_TBL[64] = {
-    0.250, 0.375, 0.500, 0.500, 0.500, 0.500, 0.375, 0.250,
-    0.375, 0.500, 0.750, 0.750, 0.750, 0.750, 0.500, 0.375,
-    0.500, 0.750, 1.000, 1.000, 1.000, 1.000, 0.750, 0.500,
-    0.500, 0.750, 1.000, 1.000, 1.000, 1.000, 0.750, 0.500,
-    0.500, 0.750, 1.000, 1.000, 1.000, 1.000, 0.750, 0.500,
-    0.500, 0.750, 1.000, 1.000, 1.000, 1.000, 0.750, 0.500,
-    0.375, 0.500, 0.750, 0.750, 0.750, 0.750, 0.500, 0.375,
-    0.250, 0.375, 0.500, 0.500, 0.500, 0.500, 0.375, 0.250,
+static const double KNIGHT_PST[64] = {
+    10, 15, 10, 10, 10, 10, 15, 10,
+    15, 20, 30, 35, 35, 30, 20, 15,
+    25, 40, 75, 65, 65, 75, 40, 25,
+    30, 50, 75, 90, 90, 75, 50, 30,
+    25, 50, 75, 95, 95, 75, 50, 25,
+    20, 40, 60, 65, 65, 60, 40, 20,
+    10, 20, 30, 35, 35, 30, 20, 10,
+     5, 10, 10, 10, 10, 10, 10,  5,
 };
 
-static const double BISHOP_SQ_TBL[64] = {
-    0.55, 0.70, 0.70, 0.70, 0.70, 0.70, 0.70, 0.55,
-    0.70, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 0.70,
-    0.70, 0.85, 0.925,1.00, 1.00, 0.925,0.85, 0.70,
-    0.70, 0.925,0.925,1.00, 1.00, 0.925,0.925,0.70,
-    0.70, 0.85, 1.00, 1.00, 1.00, 1.00, 0.85, 0.70,
-    0.70, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 0.70,
-    0.70, 0.925,0.85, 0.85, 0.85, 0.85, 0.925,0.70,
-    0.55, 0.70, 0.25, 0.70, 0.70, 0.25, 0.70, 0.55
+static const double BISHOP_PST[64] = {
+    30, 20, 20, 20, 20, 20, 20, 30,
+    20, 70, 45, 50, 50, 45, 70, 20,
+    25, 45, 55, 55, 55, 55, 45, 25,
+    25, 45, 55, 65, 65, 55, 45, 25,
+    25, 45, 55, 65, 65, 55, 45, 25,
+    25, 40, 50, 55, 55, 50, 40, 25,
+    20, 65, 40, 45, 45, 40, 65, 20,
+    30, 20, 20, 20, 20, 20, 20, 30,
 };
 
-static const double PAWN_SQ_TBL[64] = {
-    0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50,
-    1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00,
-    0.60, 0.60, 0.70, 0.80, 0.80, 0.70, 0.60, 0.60,
-    0.55, 0.55, 0.60, 0.77, 0.77, 0.60, 0.55, 0.55,
-    0.50, 0.50, 0.50, 0.75, 0.75, 0.50, 0.50, 0.50,
-    0.55, 0.45, 0.40, 0.50, 0.50, 0.40, 0.45, 0.55,
-    0.55, 0.60, 0.60, 0.25, 0.25, 0.60, 0.60, 0.55,
-    0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50
+static const double PAWN_PST[64] = {
+     0,  0,  0,  0,  0,  0,  0,  0,
+    40, 40, 42, 45, 45, 42, 40, 40,
+    42, 40, 44, 50, 50, 44, 40, 42,
+    44, 44, 47, 70, 70, 47, 44, 44,
+    48, 48, 50, 60, 60, 50, 48, 48,
+    52, 52, 55, 60, 60, 55, 52, 52,
+    70, 70, 70, 70, 70, 70, 70, 70,
+     0,  0,  0,  0,  0,  0,  0,  0,
+};
+
+static const double ROOK_PST[64] = {
+    40, 40, 42, 45, 45, 42, 40, 40,
+    40, 40, 42, 45, 45, 42, 40, 40,
+    40, 40, 42, 45, 45, 42, 40, 40,
+    40, 40, 42, 45, 45, 42, 40, 40,
+    40, 40, 42, 45, 45, 42, 40, 40,
+    40, 40, 42, 45, 45, 42, 40, 40,
+    60, 60, 62, 65, 65, 62, 60, 60,
+    45, 45, 47, 50, 50, 47, 45, 45,
+};
+
+static const double QUEEN_PST[64] = {
+    20, 25, 30, 30, 30, 30, 25, 20,
+    25, 30, 35, 40, 40, 35, 30, 25,
+    30, 35, 40, 45, 45, 40, 35, 30,
+    35, 40, 45, 55, 55, 45, 40, 35,
+    35, 40, 45, 55, 55, 45, 40, 35,
+    30, 35, 40, 45, 45, 40, 35, 30,
+    25, 30, 35, 40, 40, 35, 30, 25,
+    20, 25, 30, 30, 30, 30, 25, 20,
+};
+
+static const double KING_PST[64] = {
+    35, 45, 65, 20, 35, 20, 70, 40,
+    20, 25, 25, 10, 10, 25, 25, 20,
+    10, 15, 15,  5,  5, 15, 15, 10,
+     5, 10, 10,  0,  0, 10, 10,  5,
+     5, 10, 10,  0,  0, 10, 10,  5,
+    10, 15, 15,  5,  5, 15, 15, 10,
+    20, 25, 25, 10, 10, 25, 25, 20,
+    35, 45, 65, 20, 35, 20, 70, 40,
+};
+
+static const double* PST[6] = {
+    PAWN_PST, KNIGHT_PST, BISHOP_PST, ROOK_PST, QUEEN_PST, KING_PST
 };
 
 static bool tables_ready = false;
@@ -313,7 +351,6 @@ Board apply_move(const Board& b, const Move& m) {
     return n;
 }
 
-
 // double move_scoring(const Move& m, const Board& before, const Board& after, const int& depth){
 
 //     vector<double> score(6, 5.0);
@@ -358,57 +395,62 @@ Board apply_move(const Board& b, const Move& m) {
 // }
 
 double move_scoring(const Move& m, const Board& before, const Board& after, const int& depth) {
-    Color us = before.turn;
+    Color us    = before.turn;
+    Color enemy = (Color)(1 - us);
     uint8_t from = m.from, to = m.to;
 
     Piece p = NO_PIECE;
     for (int i = 0; i < 6; i++)
         if (before.bb[us][i] & (1ULL << from)) { p = (Piece)i; break; }
 
-    // Base score from PST
-    int to_sq   = (us == WHITE) ? to   : (to   ^ 56);
+    int to_sq = (us == WHITE) ? to : (to ^ 56);
     int from_sq = (us == WHITE) ? from : (from ^ 56);
 
     double score = 0.0;
 
-    switch(p) {
-        case PAWN: {
-            score = PAWN_SQ_TBL[to_sq] * 2.0;  // amplify range
-            // bonus for central pawns (d4/e4/d5/e5)
-            if (to_sq == 27 || to_sq == 28 || to_sq == 35 || to_sq == 36)
-                score *= 2.0;
-            break;
-        }
-        case KNIGHT:
-        case BISHOP: {
-            const double* PST = (p == KNIGHT) ? KNIGHT_SQ_TBL : BISHOP_SQ_TBL;
-            score = PST[to_sq] * 2.0;
-            // development bonus: reward first move off back rank
-            if (from_sq < 8) score *= 2.5;
-            break;
-        }
-        case ROOK:
-            score = 0.3;  // rare in openings, low base
-            break;
-        case QUEEN:
-            score = (depth < 2) ? 0.1 : 0.5;  // penalize early queen moves
-            break;
-        case KING:
-            score = m.is_castle ? 1.5 : 0.05;
-            break;
-        default:
-            score = 0.1;
+    Piece victim = NO_PIECE;
+    if (m.is_ep) {
+        victim = PAWN;
+    } else {
+        for (int i = 0; i < 6; i++)
+            if (before.bb[enemy][i] & (1ULL << to)) { victim = (Piece)i; break; }
+    }
+    if (victim != NO_PIECE) {
+        double loss = max(0.0, PIECE_VAL[p] - PIECE_VAL[victim]);
+        score += (PIECE_VAL[victim] - 0.1 * loss) / 10.0;
     }
 
-    return max(score, 1e-6);  // never exactly zero
+    if (victim == NO_PIECE && is_attacked(before, (int)from, enemy)
+                           && !is_attacked(after, (int)to, enemy))
+        score += PIECE_VAL[p] / 10.0;
+
+    if (is_attacked(after, lsb(after.bb[enemy][KING]), us))
+        score += 25.0;
+
+    if (m.is_castle)
+        return score + 70.0;
+
+    if (p != NO_PIECE)
+        score += PST[p][to_sq] - PST[p][from_sq];
+
+    if ((p == KNIGHT || p == BISHOP) && from_sq < 8)
+        score += 35.0;
+
+    if (p == PAWN && (to_sq == 27 || to_sq == 28 || to_sq == 35 || to_sq == 36))
+        score += 15.0;
+
+    if (p == QUEEN && depth < 3)
+        score -= 50.0;
+    if (p == KING)
+        score -= 35.0;  
+
+    return score;
 }
 
 vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int& depth) {
     init_tables();
     vector <pair<Move, double>> legal;
     legal.reserve(64);
-
-    int topk = (depth < 10) ? 10 - depth : 1;
 
     Color us  = b.turn;
     Color enemy = (Color)(1 - us);
@@ -562,25 +604,19 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
         }
     }
 
-    // sort(legal.begin(), legal.end(), [](auto &a, auto &b){ return a.second > b.second; });
+    sort(legal.begin(), legal.end(), [](auto &a, auto &b){ return a.second > b.second; });
 
-    // double sum = accumulate(legal.begin(), legal.end(), 0.0, [](double s, auto &p){ return s + p.second; });
-    // for (auto &p : legal) if (sum) p.second /= sum;
-
-    // legal.erase(
-    //     remove_if(legal.begin(), legal.end(),
-    //         [](const pair<Move,double>& p) { return p.second < PROB_THRESHOLD; }),
-    //     legal.end()
-    // );
-    double sum = accumulate(legal.begin(), legal.end(), 0.0,
-        [](double s, auto& p){ return s + p.second; });
+    static const double TEMP = 45.0;
+    double max_score = legal.empty() ? 0.0 : legal.front().second;
+    double sum = 0.0;
+    for (auto& p : legal) { p.second = exp((p.second - max_score) / TEMP); sum += p.second; }
     for (auto& p : legal) p.second /= sum;
 
-    // Sharpen with temperature
-    static const double TEMP = 0.3;
-    sum = 0.0;
-    for (auto& p : legal) { p.second = exp(p.second / TEMP); sum += p.second; }
-    for (auto& p : legal) p.second /= sum;
+    legal.erase(
+        remove_if(legal.begin(), legal.end(),
+            [](const pair<Move,double>& p) { return p.second < PROB_THRESHOLD; }),
+        legal.end()
+    );
 
     return legal;
 }

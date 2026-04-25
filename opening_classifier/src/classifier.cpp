@@ -10,7 +10,6 @@
 #include <chrono>
 #include <omp.h>
 #include <atomic>
-#include <numeric>
 
 using namespace std;
 
@@ -19,6 +18,7 @@ void ClassifierEngine::load_eco(const vector<tuple<string,string,string>>& rows)
     roots_.clear();
     eco_name_.clear();
     all_eco_codes_.clear();
+    eco_to_idx_.clear();
 
     for (auto& [eco, name, fen] : rows) {
         try {
@@ -28,6 +28,7 @@ void ClassifierEngine::load_eco(const vector<tuple<string,string,string>>& rows)
             if (last.board.occupied == 0 && last.board.zobrist != 0)
                 cerr << "CORRUPT board for " << eco << "\n";
             eco_name_[eco] = name;
+            eco_to_idx_[eco] = (uint16_t)all_eco_codes_.size();
             all_eco_codes_.push_back(eco);
         } catch (...) {
             cerr << "Skipping invalid fen: " << fen << "\n";
@@ -53,14 +54,10 @@ void ClassifierEngine::load_priors(const unordered_map<string, double>& priors)
 
 void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     reach_index_.clear();
-    board_zh_.clear();
+    // board_zh_.clear();
 
     Board start = board_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     generate_legal_scored_moves(start, 0);
-
-    vector<int> indices(roots_.size());
-    iota(indices.begin(), indices.end(), 0);
-    shuffle(indices.begin(), indices.end(), mt19937(42));
 
     int total = (int)roots_.size();
     int nthreads = omp_get_max_threads();
@@ -68,7 +65,7 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     cout << "Build Index BFS initiated with " << total << " ECOs" << " across " << nthreads << " threads\n";
 
     vector<unordered_map<uint64_t, vector<ReachEntry>>> local_indices(nthreads);
-    vector<vector<Board>> local_board_zh(nthreads);
+    // vector<vector<Board>> local_board_zh(nthreads);
 
 
     atomic<int> done{0};
@@ -76,7 +73,7 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
 
     #pragma omp parallel for schedule(dynamic, 1)
     for (int i = 0; i < total; i++) {
-        const auto& root = roots_[indices[i]];
+        const auto& root = roots_[i];
         struct Node { Board board; double log_prob; int depth; };
 
         unordered_map<uint64_t, double> visited;
@@ -94,7 +91,7 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
         while (!q.empty()) {
             auto [board, lp, depth] = q.front();
             q.pop();
-            local_board_zh[omp_get_thread_num()].push_back(board);
+            // local_board_zh[omp_get_thread_num()].push_back(board);
 
             if (depth >= max_depth) continue;
 
@@ -109,7 +106,10 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
                 Board child = apply_move(board, mv);
                 uint64_t czh = child.zobrist;
                 
-                double child_lp = lp - log(score);
+                auto vit = visited.find(czh);
+                // add check to verify if it is not another Opening ECO
+
+                double child_lp = lp + log(score);
                 if (child_lp < min_log_prob) continue;
 
                 prob_acc[czh] += exp(child_lp);
@@ -117,7 +117,6 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
                 if (!shortest.count(czh))
                     shortest[czh] = depth + 1;
 
-                auto vit = visited.find(czh);
                 if (vit == visited.end() || vit->second < child_lp) {
                     visited[czh] = child_lp;
                     q.push({child, child_lp, depth + 1});
@@ -126,8 +125,10 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
         }
 
         int tid = omp_get_thread_num();
+        uint16_t idx = eco_to_idx_.at(root.eco);
         for (auto& [zh, prob] : prob_acc) {
-            local_indices[tid][zh].push_back({ root.eco, prob, shortest.count(zh) ? shortest.at(zh) : -1});
+            int pl = shortest.count(zh) ? shortest.at(zh) : -1;
+            local_indices[tid][zh].push_back({ idx, (float)prob, (uint8_t)(pl < 0 ? 255 : pl) });
         }
 
         int n_done = ++done;
@@ -138,19 +139,25 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
             double rate = n_done / elapsed;
             double remaining = (total - n_done) / rate;
             cout << "\rProgress: " << n_done << "/" << total
-                 << " | Elapsed" << int(elapsed) << " | ETA: " << int(remaining) << "s   " << flush;
+                 << " | Elapsed: " << int(elapsed) << " | ETA: " << int(remaining) << "s   " << flush;
         }
     }
 
     cout << "\nMerging thread results...\n";
-    for (auto& local : local_indices)
-        for (auto& [zh, entries] : local)
-            for (auto& e : entries)
-                reach_index_[zh].push_back(e);
+    for (auto& local : local_indices) {
+        for (auto& [zh, entries] : local) {
+            auto& dest = reach_index_[zh];
+            dest.insert(dest.end(),
+                        make_move_iterator(entries.begin()),
+                        make_move_iterator(entries.end()));
+        }
+        local.clear();  
+    }
+    local_indices.clear();  
 
-    for (auto& local : local_board_zh)
-        for (auto& entry : local)
-            board_zh_.push_back(entry);
+    // for (auto& local : local_board_zh)
+    //     for (auto& entry : local)
+    //         board_zh_.push_back(entry);
 
     cout << "Index built. " << reach_index_.size() << " unique positions indexed.\n";
 }
@@ -170,8 +177,9 @@ vector<ScoredOpening> ClassifierEngine::classify( const string& fen, int top_n) 
 
     if (it != reach_index_.end()) {
         for (auto& entry : it->second) {
-            likelihoods[entry.eco] = entry.likelihood;
-            path_lengths[entry.eco] = entry.path_length;
+            const string& eco = all_eco_codes_[entry.eco_idx];
+            likelihoods[eco]  = entry.likelihood;
+            path_lengths[eco] = (entry.path_length == 255) ? -1 : entry.path_length;
         }
     }
 
@@ -187,7 +195,7 @@ vector<ScoredOpening> ClassifierEngine::classify( const string& fen, int top_n) 
         if (pit != priors_.end()) prior = pit->second;
 
         double unnorm = prior * L;
-        normaliser   += unnorm;
+        normaliser += unnorm;
 
         results.push_back({
             eco,
@@ -237,21 +245,19 @@ void ClassifierEngine::save_index(const string& path) const {
         uint32_t ne = entries.size();
         f.write(reinterpret_cast<const char*>(&ne), sizeof(ne));
         for (auto& e : entries) {
-            uint32_t elen = e.eco.size();
-            f.write(reinterpret_cast<const char*>(&elen), sizeof(elen));
-            f.write(e.eco.data(), elen);
+            f.write(reinterpret_cast<const char*>(&e.eco_idx),     sizeof(e.eco_idx));
             f.write(reinterpret_cast<const char*>(&e.likelihood),  sizeof(e.likelihood));
             f.write(reinterpret_cast<const char*>(&e.path_length), sizeof(e.path_length));
         }
     }
 
-    uint64_t nboard = board_zh_.size();
-    f.write(reinterpret_cast<const char*>(&nboard), sizeof(nboard));
-    for (auto& b : board_zh_) {
-        f.write(reinterpret_cast<const char*>(&b), sizeof(Board));
-    }
+    // uint64_t nboard = board_zh_.size();
+    // f.write(reinterpret_cast<const char*>(&nboard), sizeof(nboard));
+    // for (auto& b : board_zh_) {
+    //     f.write(reinterpret_cast<const char*>(&b), sizeof(Board));
+    // }
 
-    cout << "Index saved to " << path << "\n";
+    // cout << "Index saved to " << path << "\n";
 }
 
 void ClassifierEngine::load_index(const string& path) {
@@ -261,6 +267,7 @@ void ClassifierEngine::load_index(const string& path) {
     reach_index_.clear();
     all_eco_codes_.clear();
     eco_name_.clear();
+    eco_to_idx_.clear();
     board_zh_.clear();
 
     uint64_t neco;
@@ -274,6 +281,7 @@ void ClassifierEngine::load_index(const string& path) {
         f.read(reinterpret_cast<char*>(&nlen), sizeof(nlen));
         string name(nlen, '\0');
         f.read(name.data(), nlen);
+        eco_to_idx_[eco] = (uint16_t)all_eco_codes_.size();
         all_eco_codes_.push_back(eco);
         eco_name_[eco] = name;
     }
@@ -286,24 +294,21 @@ void ClassifierEngine::load_index(const string& path) {
         uint32_t ne;
         f.read(reinterpret_cast<char*>(&ne), sizeof(ne));
         for (uint32_t j = 0; j < ne; j++) {
-            uint32_t elen;
-            f.read(reinterpret_cast<char*>(&elen), sizeof(elen));
-            string eco(elen, '\0');
-            f.read(eco.data(), elen);
-            double likelihood; int32_t path_length;
+            uint16_t eco_idx; float likelihood; uint8_t path_length;
+            f.read(reinterpret_cast<char*>(&eco_idx),     sizeof(eco_idx));
             f.read(reinterpret_cast<char*>(&likelihood),  sizeof(likelihood));
             f.read(reinterpret_cast<char*>(&path_length), sizeof(path_length));
-            reach_index_[zh].push_back({eco, likelihood, path_length});
+            reach_index_[zh].push_back({eco_idx, likelihood, path_length});
         }
     }
 
-    uint64_t nboard;
-    f.read(reinterpret_cast<char*>(&nboard), sizeof(nboard));
-    board_zh_.resize(nboard);
-    for (uint64_t i = 0; i < nboard; i++) {
-        f.read(reinterpret_cast<char*>(&board_zh_[i]), sizeof(Board));
-    }
-    cout << "Index loaded from " << path
-         << " (" << reach_index_.size() << " positions, "
-         << all_eco_codes_.size() << " ECOs)\n";
+    // uint64_t nboard;
+    // f.read(reinterpret_cast<char*>(&nboard), sizeof(nboard));
+    // board_zh_.resize(nboard);
+    // for (uint64_t i = 0; i < nboard; i++) {
+    //     f.read(reinterpret_cast<char*>(&board_zh_[i]), sizeof(Board));
+    // }
+    // cout << "Index loaded from " << path
+    //      << " (" << reach_index_.size() << " positions, "
+    //      << all_eco_codes_.size() << " ECOs)\n";
 }
