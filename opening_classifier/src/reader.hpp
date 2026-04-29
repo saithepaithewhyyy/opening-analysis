@@ -93,7 +93,7 @@ namespace Reader {
         // @brief Get move from book
         // @param key Zobrist key
         // @param minimum_weight Minimum weight of book moves to be returned (default 0)
-        // @return Vector with the book moves (toFile, toRow, fromFile, fromRow, promotion, weight)
+        // @return Vector with the book moves (Move)
         Moves GetBookMoves(uint64_t key, uint16_t minimum_weight=0) {
             EntryStruct *entry;
             uint16_t move;
