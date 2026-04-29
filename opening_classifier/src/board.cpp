@@ -1,5 +1,5 @@
 #include "board.hpp"
-#include "bltn_ctzll.hpp"
+#include "definitions.hpp"
 #include <sstream>
 #include <stdexcept>
 

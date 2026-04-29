@@ -13,3 +13,6 @@ __pycache__/
 build/
 chess_classifier.egg-info/
 clean_env/
+
+opening_books/*
+!opening_books

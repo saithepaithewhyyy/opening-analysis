@@ -1,4 +1,5 @@
 #pragma once
+#include "zobrist_key.hpp"
 #include <cstdint>
 #include <string>
 #include <array>
@@ -6,6 +7,7 @@
 #include <random>
 
 using namespace std;
+typedef vector<Move> Moves;
 
 enum Piece  { PAWN=0, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_PIECE=6 };
 enum Color  { WHITE=0, BLACK=1 };
@@ -45,13 +47,27 @@ struct ZobristTable {
     uint64_t ep_file[8];
 
     ZobristTable() {
-        mt19937_64 rng(0xDEADBEEFCAFE1234ULL);
-        for (auto& c : piece)
-            for (auto& p : c)
-                for (auto& s : p) s = rng();
-        black_to_move = rng();
-        for (auto& c : castling) c = rng();
-        for (auto& f : ep_file)  f = rng();
+        for(int c=0; c<2; c++){
+            for(int p=0; p<6; p++){
+                for(int sq=0; sq<64; sq++){
+                    piece[c][p][sq] = Random64[(p*2 + (1-c))*64+sq];
+                }
+            }
+        }
+
+        for(int mask=0; mask<16; mask++){
+            if (mask & 0x8) castling[mask] ^= Random64[768]; // WK
+            if (mask & 0x4) castling[mask] ^= Random64[769]; // WQ
+            if (mask & 0x2) castling[mask] ^= Random64[770]; // BK
+            if (mask & 0x1) castling[mask] ^= Random64[771]; // BQ
+        }
+        
+        
+        for(int f=0; f<8; f++){
+            ep_file[f] = Random64[772+f];
+        }
+        
+        black_to_move = Random64[780];
     }
 };
 
