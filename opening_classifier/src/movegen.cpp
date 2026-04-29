@@ -1,13 +1,16 @@
 #include "movegen.hpp"
 #include "definitions.hpp"
+#include "reader.hpp"
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <algorithm>
+#include <set>
 #include <numeric>
 #include <mutex>
 
 using namespace std;
+using namespace Reader;
 
 const int promos[] = {QUEEN, ROOK, BISHOP, KNIGHT};
 static const double PROB_THRESHOLD = 0.02;
@@ -99,8 +102,27 @@ static const double* PST[6] = {
     PAWN_PST, KNIGHT_PST, BISHOP_PST, ROOK_PST, QUEEN_PST, KING_PST
 };
 
-static bool tables_ready = false;
+static Books load_polyglot(const vector<char*> path_names){
+    Books books;
+    for(char* path_name: path_names){
+        Book book;
+        book.Load(path_name);
+        books.push_back(book);
+    }
+    return books;
+}
 
+static BookEntries search_polyglot(const Books books, const uint64_t zh){
+    set<BookEntry> bookEntrySet;
+    for(Book book: books){
+        BookEntries subBookEntries = book.SearchBook(zh);
+        bookEntrySet.insert(subBookEntries.begin(), subBookEntries.end());
+    }
+    BookEntries bookEntries(bookEntrySet.begin(), bookEntrySet.end());
+    return bookEntries;
+}
+
+static bool tables_ready = false;
 static void init_tables() {
     static std::once_flag flag;
     // if (tables_ready) return;

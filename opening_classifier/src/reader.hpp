@@ -14,7 +14,7 @@
 using namespace std;
 
 // Taken from https://github.com/deoshreyas/Chess-Polyglot-Reader
-// Much more easier than making my own polyglot reader
+// Changed according to use case
 
 namespace Reader {
     class underlying {
@@ -50,13 +50,16 @@ namespace Reader {
         uint16_t weight;
         uint32_t learn;
     };
+    
+    typedef vector<BookEntry> BookEntries;
+    typedef vector<Book> Books;
 
     static long int num_entries = 0;
 
     static EntryStruct* entries;
 
-    static std::string Files[8] = {"a", "b", "c", "d", "e", "f", "g", "h"};
-    static std::string Rows[8] = {"1", "2", "3", "4", "5", "6", "7", "8"};
+    static string Files[8] = {"a", "b", "c", "d", "e", "f", "g", "h"};
+    static string Rows[8] = {"1", "2", "3", "4", "5", "6", "7", "8"};
 
     struct BookEntry {
         Move move;
@@ -64,7 +67,6 @@ namespace Reader {
         uint32_t learn;
     };
 
-    typedef vector<BookEntry> BookEntries;
 }
 
 namespace Reader {
@@ -154,7 +156,7 @@ namespace Reader {
         }  
         
         void Clear() {
-            std::free(entries);
+            free(entries);
         } 
     };
 }
