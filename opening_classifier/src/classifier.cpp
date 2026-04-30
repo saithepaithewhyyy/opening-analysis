@@ -67,7 +67,6 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     vector<unordered_map<uint64_t, vector<ReachEntry>>> local_indices(nthreads);
     // vector<vector<Board>> local_board_zh(nthreads);
 
-
     atomic<int> done{0};
     auto wall_start = chrono::steady_clock::now();
 

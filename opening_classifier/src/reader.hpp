@@ -47,23 +47,22 @@ namespace Reader {
     struct EntryStruct {
         uint64_t key;
         uint16_t move;
-        uint16_t weight;
+        uint32_t weight;
         uint32_t learn;
     };
     
     typedef vector<BookEntry> BookEntries;
     typedef vector<Book> Books;
 
-    static long int num_entries = 0;
-
-    static EntryStruct* entries;
+    long int num_entries = 0;
+    EntryStruct* entries;
 
     static string Files[8] = {"a", "b", "c", "d", "e", "f", "g", "h"};
     static string Rows[8] = {"1", "2", "3", "4", "5", "6", "7", "8"};
 
     struct BookEntry {
         Move move;
-        uint16_t weight;
+        uint32_t weight;
         uint32_t learn;
     };
 
@@ -72,25 +71,57 @@ namespace Reader {
 namespace Reader {
     class Book {
     public:
-        void Load(const char *path) {
-            FILE *file = std::fopen(path, "rb");
-            if (file==NULL) {
-                cerr << "<Error> Please use valid book" << std::endl;
-                return;
-            } else {
+        void Load(const vector<const char*>& paths) {
+            underlying u;
+            vector<EntryStruct> all_entries;
+
+            for (auto& path : paths) {
+                FILE *file = fopen(path, "rb");
+                if (file == NULL) { 
+                    cerr << "<Error> Please use valid book: " << path << endl; 
+                    continue; 
+                }
+
                 fseek(file, 0, SEEK_END);
                 long position = ftell(file);
-                if (position < sizeof(EntryStruct)) {
-                    cerr << "<Error> No entries found" << std::endl;
-                    return;
+                if (position < (long)sizeof(EntryStruct)) { 
+                    cerr << "<Error> No entries found in: " << path << endl; fclose(file); 
+                    continue; 
                 }
-                num_entries = position / sizeof(EntryStruct);
-                entries = (EntryStruct*)malloc(num_entries * sizeof(EntryStruct));
+
+                long n = position / sizeof(EntryStruct);
+                vector<EntryStruct> tmp(n);
                 rewind(file);
-                size_t returnValue = fread(entries, sizeof(EntryStruct), num_entries, file);
+                fread(tmp.data(), sizeof(EntryStruct), n, file);
                 fclose(file);
+
+                all_entries.insert(all_entries.end(), tmp.begin(), tmp.end());
             }
-        }
+
+            sort(all_entries.begin(), all_entries.end(), [&](const EntryStruct& a, const EntryStruct& b) {
+                if (u.endian_swap_u64(a.key) != u.endian_swap_u64(b.key))
+                    return u.endian_swap_u64(a.key) < u.endian_swap_u64(b.key);
+                return u.endian_swap_u16(a.move) < u.endian_swap_u16(b.move);
+            });
+
+
+            vector<EntryStruct> merged;
+            for (auto& e : all_entries) {
+                if (!merged.empty() &&
+                    u.endian_swap_u64(merged.back().key)  == u.endian_swap_u64(e.key) &&
+                    u.endian_swap_u16(merged.back().move) == u.endian_swap_u16(e.move)) {
+                    uint32_t combined = (uint32_t)u.endian_swap_u16(merged.back().weight)
+                                    + (uint32_t)u.endian_swap_u16(e.weight);
+                    merged.back().weight = u.endian_swap_u16((uint16_t)min(combined, (uint32_t)UINT16_MAX));
+                } else {
+                    merged.push_back(e);
+                }
+            }
+
+            num_entries = (long)merged.size();
+            entries = (EntryStruct*)malloc(num_entries * sizeof(EntryStruct));
+            memcpy(entries, merged.data(), num_entries * sizeof(EntryStruct));
+        } 
 
         // @brief Get move from book
         // @param key Zobrist key

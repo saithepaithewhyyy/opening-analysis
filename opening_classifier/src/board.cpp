@@ -58,7 +58,7 @@ Board board_from_fen(const string& fen) {
 
 uint64_t compute_zobrist(const Board& b) {
     uint64_t z = 0;
-    for (int c = 0; c < 2; c++)
+    for (int c = 0; c < 2; c++){
         for (int p = 0; p < 6; p++) {
             uint64_t bb = b.bb[c][p];
             while (bb) {
@@ -67,8 +67,20 @@ uint64_t compute_zobrist(const Board& b) {
                 bb &= bb - 1;
             }
         }
+    }
+
     if (b.turn == BLACK) z ^= ZT.black_to_move;
     z ^= ZT.castling[b.castling & 0xF];
-    if (b.ep_sq != 255) z ^= ZT.ep_file[b.ep_sq & 7];
+
+    if (b.ep_sq != 255) {
+        int ep_file = b.ep_sq & 7;
+        int pawn_rank_sq = b.turn == WHITE ? b.ep_sq - 8 : b.ep_sq + 8;
+        uint64_t pawns = b.bb[b.turn][PAWN];
+        bool can_capture = false;
+        if (ep_file > 0 && (pawns & (1ULL << (pawn_rank_sq - 1)))) can_capture = true;
+        if (ep_file < 7 && (pawns & (1ULL << (pawn_rank_sq + 1)))) can_capture = true;
+        if (can_capture) z ^= ZT.ep_file[ep_file];
+    }
+        // if (b.ep_sq != 255) z ^= ZT.ep_file[b.ep_sq & 7];
     return z;
 }
