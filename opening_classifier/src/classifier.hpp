@@ -1,5 +1,6 @@
 #pragma once
 #include "board.hpp"
+#include "reader.hpp"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -29,6 +30,7 @@ public:
 
     void load_eco(const vector<tuple<string,string,string>>& rows);
     void load_priors(const unordered_map<string, double>& priors = {});
+    void load_book(const vector<const char*> paths = {});
 
     void build_index(int max_depth = MAX_DEPTH, double min_log_prob = MIN_LOG_PROB);
 
@@ -49,6 +51,8 @@ private:
     unordered_map<string, double> priors_;
     double default_prior_ = 0.00027100271;
     double floor_prior_ = 0.00027100271;
+
+    Reader::Book book;
 
     unordered_map<uint64_t, vector<ReachEntry>> reach_index_;
     vector<Board> board_zh_;

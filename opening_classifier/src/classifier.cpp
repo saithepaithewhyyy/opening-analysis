@@ -52,6 +52,11 @@ void ClassifierEngine::load_priors(const unordered_map<string, double>& priors)
     }
 }
 
+void ClassifierEngine::load_book(const vector<const char*> paths){
+    book.Clear();
+    book.Load(paths);
+}
+
 void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     reach_index_.clear();
     // board_zh_.clear();

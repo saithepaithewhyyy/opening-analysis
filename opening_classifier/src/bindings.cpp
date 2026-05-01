@@ -25,6 +25,12 @@ PYBIND11_MODULE(chess_classifier, m) {
           .def(py::init<>())
           .def("load_eco", &ClassifierEngine::load_eco,     py::arg("rows"))
           .def("load_priors", &ClassifierEngine::load_priors,  py::arg("priors"))
+          .def("load_book", [](ClassifierEngine& self, const std::vector<std::string>& paths){
+                    vector<const char*> ptrs;
+                    ptrs.reserve(paths.size());
+                    for (const auto& s : paths) ptrs.push_back(s.c_str());
+                    self.load_book(ptrs);
+               }, py::arg("paths"))
           .def("build_index", &ClassifierEngine::build_index,
                py::arg("max_depth") = ClassifierEngine::MAX_DEPTH,
                py::arg("min_log_prob") = ClassifierEngine::MIN_LOG_PROB)
