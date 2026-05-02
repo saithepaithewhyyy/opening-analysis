@@ -27,6 +27,7 @@ public:
     static constexpr double EPSILON = 1e-15;
     static constexpr double MIN_LOG_PROB = -15.0;
     static constexpr int MAX_DEPTH = 3;
+    Reader::Book book;
 
     void load_eco(const vector<tuple<string,string,string>>& rows);
     void load_priors(const unordered_map<string, double>& priors = {});
@@ -51,8 +52,6 @@ private:
     unordered_map<string, double> priors_;
     double default_prior_ = 0.00027100271;
     double floor_prior_ = 0.00027100271;
-
-    Reader::Book book;
 
     unordered_map<uint64_t, vector<ReachEntry>> reach_index_;
     vector<Board> board_zh_;

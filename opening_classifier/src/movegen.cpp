@@ -261,7 +261,7 @@ Board apply_move(const Board& b, const Move& m) {
 }
 
 double move_scoring(const Move& m, const Board& before, const Board& after, const int& depth) {
-    Color us    = before.turn;
+    Color us = before.turn;
     Color enemy = (Color)(1 - us);
     uint8_t from = m.from, to = m.to;
 
@@ -313,7 +313,7 @@ double move_scoring(const Move& m, const Board& before, const Board& after, cons
     return score;
 }
 
-vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int& depth) {
+vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int& depth, Book book) {
     init_tables();
     vector <pair<Move, double>> legal;
     legal.reserve(64);

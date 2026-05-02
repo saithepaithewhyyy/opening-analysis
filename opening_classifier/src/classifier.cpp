@@ -62,7 +62,7 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     // board_zh_.clear();
 
     Board start = board_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    generate_legal_scored_moves(start, 0);
+    generate_legal_scored_moves(start, 0, book);
 
     int total = (int)roots_.size();
     int nthreads = omp_get_max_threads();
@@ -78,7 +78,11 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     #pragma omp parallel for schedule(dynamic, 1)
     for (int i = 0; i < total; i++) {
         const auto& root = roots_[i];
-        struct Node { Board board; double log_prob; int depth; };
+        struct Node { 
+            Board board; 
+            double log_prob; 
+            int depth; 
+        };
 
         unordered_map<uint64_t, double> visited;
         visited[root.board.zobrist] = 0.0;
@@ -99,7 +103,7 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
 
             if (depth >= max_depth) continue;
 
-            auto scored_moves = generate_legal_scored_moves(board, depth);
+            auto scored_moves = generate_legal_scored_moves(board, depth, book);
             int  n = (int)scored_moves.size();
             if  (n == 0) continue;
 
