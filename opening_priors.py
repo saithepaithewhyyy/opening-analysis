@@ -11,7 +11,7 @@ load_dotenv()
 TOKEN = os.getenv("LICHESS_TOKEN")
 API = "https://explorer.lichess.org/lichess"
 BASE_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-PRIOR_FILE = "priors.json"
+PRIOR_FILE = "C:/praneeth/progs/py/opening-analysis/priors.json"
 
 def call_api(fen:Optional[str] = BASE_FEN, variant:str = "standard", speeds:str = "blitz,rapid,classical"):
     r = requests.get(

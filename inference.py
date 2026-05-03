@@ -79,7 +79,8 @@ if __name__ == "__main__":
     engine = cc.ClassifierEngine()
     engine.load_eco(rows)
     engine.load_priors(priors)
-    engine.build_index(max_depth=6)
+    engine.load_book(["C:/praneeth/progs/py/opening-analysis/opening_books/Human-polyglot/Human.bin"])
+    engine.build_index(max_depth=4)
     save_path = "index.bin"
     engine.save_index(save_path)
 

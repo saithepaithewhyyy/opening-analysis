@@ -324,7 +324,7 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
     uint64_t our_pieces = b.us();
     uint64_t enemy_pieces = b.them();
 
-    map<Move, uint32_t> book_moves = book.GetBookMoves(b.zobrist);
+    // map<Move, uint32_t> book_moves = book.GetBookMoves(b.zobrist);
 
     auto try_add = [&](Move m) {
         Board after = apply_move(b, m);
@@ -333,14 +333,14 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
             Move ep_bleh = m;
             double score = move_scoring(m, b, after, depth); 
             
-            if(ep_bleh.is_ep!=255){
-                ep_bleh.is_ep=255;
-            }
+            // if(ep_bleh.is_ep!=255){
+            //     ep_bleh.is_ep=255;
+            // }
 
-            if(book_moves.find(ep_bleh)!=book_moves.end()){
-                uint32_t weight = book_moves[ep_bleh]; 
-                score += log1p((double) weight) * 50.0;            
-            }
+            // if(book_moves.find(ep_bleh)!=book_moves.end()){
+            //     uint32_t weight = book_moves[ep_bleh]; 
+            //     score += log1p((double) weight) * 50.0;            
+            // }
 
             legal.push_back({m, score});
         }
