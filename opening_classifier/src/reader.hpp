@@ -8,6 +8,7 @@
 #include <string>
 #include <cstdint>
 #include <vector>
+#include <map>
 #include <random>
 #include <algorithm>
 
@@ -127,27 +128,25 @@ namespace Reader {
         // @param key Zobrist key
         // @param minimum_weight Minimum weight of book moves to be returned (default 0)
         // @return Vector with the book moves (Move)
-        Moves GetBookMoves(uint64_t key, uint16_t minimum_weight=0) {
+        map<Move, uint32_t> GetBookMoves(uint64_t key, uint16_t minimum_weight=0) {
             EntryStruct *entry;
             uint16_t move;
             Move bookMove;
             underlying u;
-            Moves bookMoves;
+            map<Move, uint32_t> bookMoves;
             for (entry=entries; entry<entries+num_entries; entry++) {
                 if (u.endian_swap_u64(entry->key) == key && u.endian_swap_u16(entry->weight) >= minimum_weight) {
                     move = u.endian_swap_u16(entry->move);
                     bookMove.from = ((move>>6) & 7) * 8 + ((move>>9) & 7); 
                     bookMove.to = ((move>>0) & 7) * 8 + ((move>>3) & 7);  
                     bookMove.promotion = ((move>>12) & 7); 
-                    
                     // White
                     if (bookMove.from == 4  && bookMove.to == 7)  { bookMove.is_castle = true; bookMove.to = 6; }  // e1→h1, remap to e1→g1
                     if (bookMove.from == 4  && bookMove.to == 0)  { bookMove.is_castle = true; bookMove.to = 2; }  // e1→a1, remap to e1→c1
                     // Black
                     if (bookMove.from == 60 && bookMove.to == 63) { bookMove.is_castle = true; bookMove.to = 62; } // e8→h8
                     if (bookMove.from == 60 && bookMove.to == 56) { bookMove.is_castle = true; bookMove.to = 58; } // e8→a8
-                    
-                    bookMoves.push_back(bookMove);
+                    bookMoves[bookMove] = u.endian_swap_u16(entry->weight);
                 }
             }
             return bookMoves;

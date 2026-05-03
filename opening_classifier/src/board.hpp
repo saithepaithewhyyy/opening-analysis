@@ -18,6 +18,18 @@ struct Move {
     uint8_t promotion;   
     bool is_castle;
     bool is_ep;
+
+    bool operator<(const Move& move) const {
+        if (from != move.from){
+            return from < move.from;
+        }
+
+        if (to != move.to){ 
+            return to < move.to;
+        }
+
+        return promotion < move.promotion;
+    }
 };
 
 struct Board {
