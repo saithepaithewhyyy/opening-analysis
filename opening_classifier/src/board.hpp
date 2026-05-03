@@ -7,7 +7,6 @@
 #include <random>
 
 using namespace std;
-typedef vector<Move> Moves;
 
 enum Piece  { PAWN=0, KNIGHT, BISHOP, ROOK, QUEEN, KING, NO_PIECE=6 };
 enum Color  { WHITE=0, BLACK=1 };
@@ -31,6 +30,8 @@ struct Move {
         return promotion < move.promotion;
     }
 };
+
+typedef vector<Move> Moves;
 
 struct Board {
     uint64_t bb[2][6] = {};   // bb[color][piece]

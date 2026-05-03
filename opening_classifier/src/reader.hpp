@@ -52,12 +52,6 @@ namespace Reader {
         uint32_t learn;
     };
     
-    typedef vector<BookEntry> BookEntries;
-    typedef vector<Book> Books;
-
-    long int num_entries = 0;
-    EntryStruct* entries;
-
     static string Files[8] = {"a", "b", "c", "d", "e", "f", "g", "h"};
     static string Rows[8] = {"1", "2", "3", "4", "5", "6", "7", "8"};
 
@@ -67,10 +61,14 @@ namespace Reader {
         uint32_t learn;
     };
 
+    typedef vector<BookEntry> BookEntries;
 }
 
 namespace Reader {
     class Book {
+    private:
+        long int num_entries = 0;
+        EntryStruct* entries = nullptr;
     public:
         void Load(const vector<const char*>& paths) {
             underlying u;
@@ -187,8 +185,12 @@ namespace Reader {
         
         void Clear() {
             free(entries);
+            num_entries = 0;
+            entries = nullptr;
         } 
     };
+
+    typedef vector<Book> Books;
 }
 
 #endif
