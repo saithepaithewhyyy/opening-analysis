@@ -80,7 +80,7 @@ if __name__ == "__main__":
     engine.load_eco(rows)
     engine.load_priors(priors)
     engine.load_book(["C:/praneeth/progs/py/opening-analysis/opening_books/Human-polyglot/Human.bin"])
-    engine.build_index(max_depth=4)
+    engine.build_index(max_depth=3)
     save_path = "index.bin"
     engine.save_index(save_path)
 
