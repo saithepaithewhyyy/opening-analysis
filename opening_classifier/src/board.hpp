@@ -19,15 +19,11 @@ struct Move {
     bool is_ep;
 
     bool operator<(const Move& move) const {
-        if (from != move.from){
-            return from < move.from;
-        }
-
-        if (to != move.to){ 
-            return to < move.to;
-        }
-
-        return promotion < move.promotion;
+        if (from != move.from) return from < move.from;
+        if (to != move.to) return to < move.to;
+        if (promotion != move.promotion) return promotion < move.promotion;
+        if (is_castle != move.is_castle) return is_castle < move.is_castle;
+        return is_ep < move.is_ep;
     }
 };
 

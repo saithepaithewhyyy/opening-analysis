@@ -69,7 +69,8 @@ uint64_t compute_zobrist(const Board& b) {
         }
     }
 
-    if (b.turn == BLACK) z ^= ZT.black_to_move;
+    if (b.turn == WHITE) z ^= ZT.black_to_move;
+    
     z ^= ZT.castling[b.castling & 0xF];
 
     if (b.ep_sq != 255) {

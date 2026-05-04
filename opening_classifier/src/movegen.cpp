@@ -332,12 +332,7 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
         if (!is_attacked(after, ksq, enemy)){
             double score = move_scoring(m, b, after, depth); 
 
-            Move dup = m;
-            if(m.is_ep != 255){
-                dup.is_ep = 255;
-            }
-            
-            auto it = book_moves.find(dup);
+            auto it = book_moves.find(m);
             if (it != book_moves.end()) {
                 cout << "found!" << endl;
                 score += log1p((double)it->second) * 50.0;
