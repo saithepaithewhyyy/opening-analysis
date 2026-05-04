@@ -313,7 +313,7 @@ double move_scoring(const Move& m, const Board& before, const Board& after, cons
     return score;
 }
 
-vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int& depth, Book& book) {
+vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int& depth, const Book& book) {
     init_tables();
     vector <pair<Move, double>> legal;
     legal.reserve(64);
@@ -324,23 +324,24 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
     uint64_t our_pieces = b.us();
     uint64_t enemy_pieces = b.them();
 
-    // map<Move, uint32_t> book_moves = book.GetBookMoves(b.zobrist);
+    map<Move, uint32_t> book_moves = book.GetBookMoves(b.zobrist);
 
     auto try_add = [&](Move m) {
         Board after = apply_move(b, m);
         int ksq = lsb(after.bb[us][KING]);
         if (!is_attacked(after, ksq, enemy)){
-            Move ep_bleh = m;
             double score = move_scoring(m, b, after, depth); 
-            
-            // if(ep_bleh.is_ep!=255){
-            //     ep_bleh.is_ep=255;
-            // }
 
-            // if(book_moves.find(ep_bleh)!=book_moves.end()){
-            //     uint32_t weight = book_moves[ep_bleh]; 
-            //     score += log1p((double) weight) * 50.0;            
-            // }
+            Move dup = m;
+            if(m.is_ep != 255){
+                dup.is_ep = 255;
+            }
+            
+            auto it = book_moves.find(dup);
+            if (it != book_moves.end()) {
+                cout << "found!" << endl;
+                score += log1p((double)it->second) * 50.0;
+            }
 
             legal.push_back({m, score});
         }
