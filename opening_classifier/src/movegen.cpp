@@ -254,6 +254,8 @@ Board apply_move(const Board& b, const Move& m) {
     n.ep_sq = 255;
     if (pc == PAWN && abs((int)m.to - (int)m.from) == 16)
         n.ep_sq = (m.from + m.to) / 2;
+    else
+        n.ep_sq = 255;
 
     n.turn    = enemy;
     n.zobrist = compute_zobrist(n);
@@ -330,9 +332,14 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
         Board after = apply_move(b, m);
         int ksq = lsb(after.bb[us][KING]);
         if (!is_attacked(after, ksq, enemy)){
-            double score = move_scoring(m, b, after, depth); 
+            double score = move_scoring(m, b, after, depth);
+            
+            Move dup = m;
+            dup.is_ep = false;   
+            dup.is_castle = false;
+            dup.promotion = (m.promotion == NO_PIECE) ? 0 : m.promotion;
 
-            auto it = book_moves.find(m);
+            auto it = book_moves.find(dup);
             if (it != book_moves.end()) {
                 cout << "found!" << endl;
                 score += log1p((double)it->second) * 50.0;

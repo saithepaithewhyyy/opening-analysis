@@ -131,8 +131,13 @@ namespace Reader {
             mv.from = ((m >> 9) & 7) * 8 + ((m >> 6) & 7);
             mv.to = ((m >> 3) & 7) * 8 + ((m >> 0) & 7);
             mv.promotion = ((m >> 12) & 7);
+            uint8_t promo = (m >> 12) & 7;
+
+            static const uint8_t promo_map[] = {6, 1, 2, 3, 4};
+            mv.promotion = (promo <= 4) ? promo_map[promo] : 6;
             mv.is_castle = false;
             mv.is_ep = false;
+
             if (mv.from == 4 && mv.to == 7) { 
                 mv.is_castle = true; 
                 mv.to = 6;  
