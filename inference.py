@@ -75,11 +75,20 @@ def classify(fen: str, top_n: int = 3, verbose: bool = True) -> list[tuple[str, 
 
 
 if __name__ == "__main__":
+    
+    import os
+    book_paths = []
+    folder_path = "C:/praneeth/progs/py/opening-analysis/opening_books"
+
+    for fname in os.listdir(folder_path):
+        if fname.endswith('.bin'):
+            book_paths.append(os.path.join(folder_path, fname))
+
     rows, priors = load_data()
     engine = cc.ClassifierEngine()
     engine.load_eco(rows)
     engine.load_priors(priors)
-    engine.load_book(["C:/praneeth/progs/py/opening-analysis/opening_books/Human-polyglot/Human.bin"])
+    engine.load_book(book_paths)
     engine.build_index(max_depth=3)
     save_path = "index.bin"
     engine.save_index(save_path)
