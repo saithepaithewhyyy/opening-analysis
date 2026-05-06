@@ -73,6 +73,16 @@ uint64_t compute_zobrist(const Board& b) {
     
     z ^= ZT.castling[b.castling & 0xF];
 
-    if (b.ep_sq != 255) z ^= ZT.ep_file[b.ep_sq & 7];
+    if (b.ep_sq != 255) {
+        int ep_file = b.ep_sq & 7;
+        int pawn_rank_sq = b.turn == WHITE ? b.ep_sq - 8 : b.ep_sq + 8;
+        uint64_t pawns = b.bb[b.turn][PAWN];
+        bool can_capture = false;
+        if (ep_file > 0 && (pawns & (1ULL << (pawn_rank_sq - 1)))) can_capture = true;
+        if (ep_file < 7 && (pawns & (1ULL << (pawn_rank_sq + 1)))) can_capture = true;
+        if (can_capture) z ^= ZT.ep_file[ep_file];
+    }
+   
+    // if (b.ep_sq != 255) z ^= ZT.ep_file[b.ep_sq & 7];
     return z;
 }
