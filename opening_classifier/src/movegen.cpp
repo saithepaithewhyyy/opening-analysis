@@ -12,13 +12,11 @@
 using namespace std;
 using namespace Reader;
 
-const int promos[] = {QUEEN, ROOK, BISHOP, KNIGHT};
+const int promos[] = {KNIGHT, BISHOP, ROOK, QUEEN};
 static const double PROB_THRESHOLD = 0.02;
 
-static inline int lsb(uint64_t b) { return ctzll(b); }
-static inline int msb(uint64_t b) { return clzll(b); }
 
-static inline uint64_t pop_lsb(uint64_t& b) {
+static inline uint64_t pop_ctzll(uint64_t& b) {
     uint64_t t = b & -b; 
     b &= b-1; 
     return t;
@@ -106,7 +104,7 @@ static const double* PST[6] = {
 static bool tables_ready = false;
 static void init_tables() {
     static once_flag flag;
-    // if (tables_ready) return;
+    if (tables_ready) return;
     call_once(flag, []() {
         for (int sq = 0; sq < 64; sq++) {
             
@@ -122,17 +120,12 @@ static void init_tables() {
             // king
             uint64_t kb = b;
             kb |= (b<<8)|(b>>8);
-            kb |= ((kb & ~0x0101010101010101ULL) >> 1) |
-                ((kb & ~0x8080808080808080ULL) << 1);
+            kb |= ((kb & ~0x0101010101010101ULL) >> 1) | ((kb & ~0x8080808080808080ULL) << 1);
             KING_ATK[sq] = kb & ~b;
 
             // pawns
-            PAWN_ATK[WHITE][sq] =
-                ((b & ~0x0101010101010101ULL) << 7) |
-                ((b & ~0x8080808080808080ULL) << 9);
-            PAWN_ATK[BLACK][sq] =
-                ((b & ~0x8080808080808080ULL) >> 7) |
-                ((b & ~0x0101010101010101ULL) >> 9);
+            PAWN_ATK[WHITE][sq] = ((b & ~0x0101010101010101ULL) << 7) | ((b & ~0x8080808080808080ULL) << 9);
+            PAWN_ATK[BLACK][sq] = ((b & ~0x8080808080808080ULL) >> 7) | ((b & ~0x0101010101010101ULL) >> 9);
 
             // rays
             for (int d = 0; d < 8; d++) {
@@ -149,7 +142,7 @@ static void init_tables() {
             }
         }
     });
-    // tables_ready = true;
+    tables_ready = true;
 }
 
 static uint64_t attack_lines(int sq, uint64_t occ, bool diagonal) {
@@ -163,23 +156,20 @@ static uint64_t attack_lines(int sq, uint64_t occ, bool diagonal) {
         dirs[0]=0; dirs[1]=1; dirs[2]=2; dirs[3]=3;
     }
 
-
     for (int i = 0; i < 4; i++) {
         uint64_t ray = RAY[sq][dirs[i]];
         uint64_t blk = ray & occ;
 
-
         if (blk) {
             int blocker;
             if (dirs[i] == 0 || dirs[i] == 2 || dirs[i] == 4 || dirs[i] == 5)
-                blocker = lsb(blk);
+                blocker = ctzll(blk);
             else
-                blocker = msb(blk);
+                blocker = clzll(blk);
             ray ^= RAY[blocker][dirs[i]];
         }
         
-        atk |= ray;
-    
+        atk |= ray;    
     }
     return atk;
 }
@@ -187,14 +177,14 @@ static uint64_t attack_lines(int sq, uint64_t occ, bool diagonal) {
 
 static bool is_attacked(const Board& b, int sq, Color enemy) {
     if (KNIGHT_ATK[sq] & b.bb[enemy][KNIGHT]) return true;
-    if (KING_ATK[sq] & b.bb[enemy][KING])   return true;
-    if (PAWN_ATK[1-enemy][sq] & b.bb[enemy][PAWN])   return true;
+    if (KING_ATK[sq] & b.bb[enemy][KING]) return true;
+    if (PAWN_ATK[1-enemy][sq] & b.bb[enemy][PAWN]) return true;
     
     uint64_t diag  = attack_lines(sq, b.occupied, true);
     uint64_t cross = attack_lines(sq, b.occupied, false);
     
     if (diag  & (b.bb[enemy][BISHOP] | b.bb[enemy][QUEEN])) return true;
-    if (cross & (b.bb[enemy][ROOK]   | b.bb[enemy][QUEEN])) return true;
+    if (cross & (b.bb[enemy][ROOK] | b.bb[enemy][QUEEN])) return true;
     return false;
 }
 
@@ -257,7 +247,7 @@ Board apply_move(const Board& b, const Move& m) {
     else
         n.ep_sq = 255;
 
-    n.turn    = enemy;
+    n.turn = enemy;
     n.zobrist = compute_zobrist(n);
     return n;
 }
@@ -269,7 +259,10 @@ double move_scoring(const Move& m, const Board& before, const Board& after, cons
 
     Piece p = NO_PIECE;
     for (int i = 0; i < 6; i++)
-        if (before.bb[us][i] & (1ULL << from)) { p = (Piece)i; break; }
+        if (before.bb[us][i] & (1ULL << from)) { 
+            p = (Piece)i; 
+            break; 
+        }
 
     int to_sq = (us == WHITE) ? to : (to ^ 56);
     int from_sq = (us == WHITE) ? from : (from ^ 56);
@@ -288,11 +281,10 @@ double move_scoring(const Move& m, const Board& before, const Board& after, cons
         score += (PIECE_VAL[victim] - 0.1 * loss) / 10.0;
     }
 
-    if (victim == NO_PIECE && is_attacked(before, (int)from, enemy)
-                           && !is_attacked(after, (int)to, enemy))
+    if (victim == NO_PIECE && is_attacked(before, (int)from, enemy) && !is_attacked(after, (int)to, enemy))
         score += PIECE_VAL[p] / 10.0;
 
-    if (is_attacked(after, lsb(after.bb[enemy][KING]), us))
+    if (is_attacked(after, ctzll(after.bb[enemy][KING]), us))
         score += 25.0;
 
     if (m.is_castle)
@@ -309,6 +301,7 @@ double move_scoring(const Move& m, const Board& before, const Board& after, cons
 
     if (p == QUEEN && depth < 3)
         score -= 50.0;
+
     if (p == KING)
         score -= 35.0;  
 
@@ -320,7 +313,7 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
     vector <pair<Move, double>> legal;
     legal.reserve(64);
 
-    Color us  = b.turn;
+    Color us = b.turn;
     Color enemy = (Color)(1 - us);
 
     uint64_t our_pieces = b.us();
@@ -330,11 +323,10 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
 
     auto try_add = [&](Move m) {
         Board after = apply_move(b, m);
-        int ksq = lsb(after.bb[us][KING]);
+        int ksq = ctzll(after.bb[us][KING]);
         if (!is_attacked(after, ksq, enemy)){
             double score = move_scoring(m, b, after, depth);
             
-
             auto it = book_moves.find(m);
             if (it != book_moves.end()){ 
                 score += log1p((double)it->second) * 50.0;
@@ -352,7 +344,7 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
         int promo_rank = (us == WHITE) ? 7 : 0;
 
         while (pawns) {
-            int sq = lsb(pawns); 
+            int sq = ctzll(pawns); 
             pawns &= pawns-1;
             int rank = sq >> 3;
 
@@ -376,7 +368,7 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
             // Captures
             uint64_t atk = PAWN_ATK[us][sq] & enemy_pieces;
             while (atk) {
-                int t = lsb(atk); atk &= atk-1;
+                int t = ctzll(atk); atk &= atk-1;
                 if ((t >> 3) == promo_rank) {
                     for (int pr : promos)
                         try_add({(uint8_t)sq,(uint8_t)t,(uint8_t)pr,false,false});
@@ -395,12 +387,12 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
     {
         uint64_t knights = b.bb[us][KNIGHT];
         while (knights) {
-            int sq = lsb(knights); 
+            int sq = ctzll(knights); 
             knights &= knights-1;
             uint64_t atk = KNIGHT_ATK[sq] & ~our_pieces;
 
             while (atk) {
-                int t = lsb(atk); 
+                int t = ctzll(atk); 
                 atk &= atk-1;
                 try_add({(uint8_t)sq,(uint8_t)t,(uint8_t)NO_PIECE,false,false});
             }
@@ -411,11 +403,11 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
     {
         uint64_t bishops = b.bb[us][BISHOP];
         while (bishops) {
-            int sq = lsb(bishops); 
+            int sq = ctzll(bishops); 
             bishops &= bishops-1;
             uint64_t atk = attack_lines(sq, b.occupied, true) & ~our_pieces;
             while (atk) {
-                int t = lsb(atk); 
+                int t = ctzll(atk); 
                 atk &= atk-1;
                 try_add({(uint8_t)sq,(uint8_t)t,(uint8_t)NO_PIECE,false,false});
             }
@@ -426,11 +418,11 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
     {
         uint64_t rooks = b.bb[us][ROOK];
         while (rooks) {
-            int sq = lsb(rooks); 
+            int sq = ctzll(rooks); 
             rooks &= rooks-1;
             uint64_t atk = attack_lines(sq, b.occupied, false) & ~our_pieces;
             while (atk) {
-                int t = lsb(atk); 
+                int t = ctzll(atk); 
                 atk &= atk-1;
                 try_add({(uint8_t)sq,(uint8_t)t,(uint8_t)NO_PIECE,false,false});
             }
@@ -441,12 +433,11 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
     {
         uint64_t queens = b.bb[us][QUEEN];
         while (queens) {
-            int sq = lsb(queens); 
+            int sq = ctzll(queens); 
             queens &= queens-1;
-            uint64_t atk = (attack_lines(sq, b.occupied, true) |
-                            attack_lines(sq, b.occupied, false)) & ~our_pieces;
+            uint64_t atk = (attack_lines(sq, b.occupied, true) | attack_lines(sq, b.occupied, false)) & ~our_pieces;
             while (atk) {
-                int t = lsb(atk); atk &= atk-1;
+                int t = ctzll(atk); atk &= atk-1;
                 try_add({(uint8_t)sq,(uint8_t)t,(uint8_t)NO_PIECE,false,false});
             }
         }
@@ -454,10 +445,10 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
 
     // king
     {
-        int sq = lsb(b.bb[us][KING]);
+        int sq = ctzll(b.bb[us][KING]);
         uint64_t atk = KING_ATK[sq] & ~our_pieces;
         while (atk) {
-            int t = lsb(atk); atk &= atk-1;
+            int t = ctzll(atk); atk &= atk-1;
             try_add({(uint8_t)sq,(uint8_t)t,(uint8_t)NO_PIECE,false,false});
         }
 
@@ -488,12 +479,15 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
     static const double TEMP = 45.0;
     double max_score = legal.empty() ? 0.0 : legal.front().second;
     double sum = 0.0;
-    for (auto& p : legal) { p.second = exp((p.second - max_score) / TEMP); sum += p.second; }
+    for (auto& p : legal) { 
+        p.second = exp((p.second - max_score) / TEMP); 
+        sum += p.second;
+    }
     for (auto& p : legal) p.second /= sum;
 
-    legal.erase(
-        remove_if(legal.begin(), legal.end(),
-            [](const pair<Move,double>& p) { return p.second < PROB_THRESHOLD; }),
+    legal.erase(remove_if(legal.begin(), legal.end(), [](const pair<Move,double>& p) { 
+            return p.second < PROB_THRESHOLD; 
+        }),
         legal.end()
     );
 

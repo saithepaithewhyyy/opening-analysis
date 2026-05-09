@@ -27,8 +27,6 @@ struct Move {
     }
 };
 
-typedef vector<Move> Moves;
-
 struct Board {
     uint64_t bb[2][6] = {};   // bb[color][piece]
     uint64_t occupied = 0;
@@ -80,6 +78,7 @@ struct ZobristTable {
     }
 };
 
+typedef vector<Move> Moves;
 extern const ZobristTable ZT;  
 Board board_from_fen(const string& fen);
 uint64_t compute_zobrist(const Board& b);

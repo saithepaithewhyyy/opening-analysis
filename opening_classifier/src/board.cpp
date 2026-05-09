@@ -16,15 +16,18 @@ Board board_from_fen(const string& fen) {
 
     int sq = 56;
     for (char c : placement) {
-        if (c == '/') { sq -= 16; continue; }
+        if (c == '/') { 
+            sq -= 16; 
+            continue; 
+        }
         if (c >= '1' && c <= '8') { 
             sq += (c - '0'); 
             continue; 
         }
 
         Color col = (islower(c)) ? BLACK : WHITE;
-        char  lc  = (islower(c)) ? c : tolower(c);
-        int   pc  = 0;
+        char lc  = (islower(c)) ? c : tolower(c);
+        int pc  = 0;
         while (PIECE_CHARS[pc] != lc) pc++;
         b.bb[col][pc] |= (1ULL << sq);
         sq++;
