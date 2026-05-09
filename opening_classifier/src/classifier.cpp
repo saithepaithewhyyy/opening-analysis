@@ -284,7 +284,6 @@ void ClassifierEngine::load_index(const string& path) {
         f.read(reinterpret_cast<char*>(&roots_[i].prior), sizeof(roots_[i].prior));
     }
 
-    // --- reach_index_ ---
     uint64_t n;
     f.read(reinterpret_cast<char*>(&n), sizeof(n));
     for (uint64_t i = 0; i < n; i++) {
@@ -304,7 +303,6 @@ void ClassifierEngine::load_index(const string& path) {
         }
     }
 
-    // --- board_zh_ ---
     uint64_t nboard;
     f.read(reinterpret_cast<char*>(&nboard), sizeof(nboard));
     board_zh_.resize(nboard);
