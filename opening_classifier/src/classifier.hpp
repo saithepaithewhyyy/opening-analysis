@@ -11,14 +11,14 @@ using namespace std;
 struct ScoredOpening {
     string eco;
     string name;
-    double likelihood;
+    double prob;
     double posterior;
     int path_length;
 };
 
 struct ReachEntry {
-    uint16_t eco_idx;
-    float likelihood;  
+    string eco;
+    float prob;  
     uint8_t path_length;
 };
 
@@ -55,8 +55,4 @@ private:
 
     unordered_map<uint64_t, vector<ReachEntry>> reach_index_;
     vector<Board> board_zh_;
-
-    unordered_map<string, string> eco_name_;
-    vector<string> all_eco_codes_;
-    unordered_map<string, uint16_t> eco_to_idx_;
 };

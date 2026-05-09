@@ -328,7 +328,7 @@ vector<pair<Move, double>> generate_legal_scored_moves(const Board& b, const int
             double score = move_scoring(m, b, after, depth);
             
             auto it = book_moves.find(m);
-            if (it != book_moves.end()){ 
+            if (it != book_moves.end()){
                 score += log1p((double)it->second) * 50.0;
             }
 

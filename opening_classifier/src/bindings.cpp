@@ -12,7 +12,7 @@ PYBIND11_MODULE(chess_classifier, m) {
      py::class_<ScoredOpening>(m, "ScoredOpening")
           .def_readonly("eco", &ScoredOpening::eco)
           .def_readonly("name", &ScoredOpening::name)
-          .def_readonly("likelihood", &ScoredOpening::likelihood)
+          .def_readonly("likelihood", &ScoredOpening::prob)
           .def_readonly("posterior", &ScoredOpening::posterior)
           .def_readonly("path_length", &ScoredOpening::path_length)
           .def("__repr__", [](const ScoredOpening& s) {
@@ -23,8 +23,8 @@ PYBIND11_MODULE(chess_classifier, m) {
 
      py::class_<ClassifierEngine>(m, "ClassifierEngine")
           .def(py::init<>())
-          .def("load_eco", &ClassifierEngine::load_eco,     py::arg("rows"))
-          .def("load_priors", &ClassifierEngine::load_priors,  py::arg("priors"))
+          .def("load_eco", &ClassifierEngine::load_eco, py::arg("rows"))
+          .def("load_priors", &ClassifierEngine::load_priors, py::arg("priors"))
           .def("load_book", [](ClassifierEngine& self, const std::vector<std::string>& paths){
                     vector<const char*> ptrs;
                     ptrs.reserve(paths.size());
