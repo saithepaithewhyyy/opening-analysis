@@ -68,7 +68,7 @@ def classify(fen: str, top_n: int = 3, verbose: bool = True) -> list[tuple[str, 
         for r in filtered:
             print(f"{r.eco:4s}  {r.name:45s}  "
                 f"post={r.posterior:.4f}  "
-                f"likelihood={r.likelihood:.4f} "
+                f"probability={r.probability:.4f} "
                 f"path={r.path_length} ")
 
     return filtered

@@ -170,15 +170,15 @@ vector<ScoredOpening> ClassifierEngine::classify( const string& fen, int top_n) 
 
     auto it = reach_index_.find(qhash);
 
-    unordered_map<string, double> likelihoods;
+    unordered_map<string, double> probabilities;
     unordered_map<string, int> path_lengths;
 
     for (auto& root : roots_)
-        likelihoods[root.eco] = EPSILON;
+        probabilities[root.eco] = EPSILON;
 
     if (it != reach_index_.end()) {
         for (auto& entry : it->second) {
-            likelihoods[entry.eco]  = entry.prob;
+            probabilities[entry.eco]  = entry.prob;
             path_lengths[entry.eco] = (entry.path_length == 255) ? -1 : entry.path_length;
         }
     }
@@ -189,7 +189,7 @@ vector<ScoredOpening> ClassifierEngine::classify( const string& fen, int top_n) 
 
     for (auto& root : roots_) {
         string eco = root.eco;
-        double L = likelihoods[eco];
+        double L = probabilities[eco];
 
         double prior = floor_prior_;
         auto pit = priors_.find(eco);
@@ -225,14 +225,28 @@ void ClassifierEngine::save_index(const string& path) const {
     ofstream f(path, ios::binary);
     if (!f) throw runtime_error("Cannot open index file for writing: " + path);
 
+    uint64_t nroots = roots_.size();
+    f.write(reinterpret_cast<const char*>(&nroots), sizeof(nroots));
+    for (auto& r : roots_) {
+        uint32_t elen = r.eco.size(), nlen = r.name.size();
+        f.write(reinterpret_cast<const char*>(&elen), sizeof(elen));
+        f.write(r.eco.data(), elen);
+        f.write(reinterpret_cast<const char*>(&nlen), sizeof(nlen));
+        f.write(r.name.data(), nlen);
+        f.write(reinterpret_cast<const char*>(&r.board), sizeof(Board));
+        f.write(reinterpret_cast<const char*>(&r.prior), sizeof(r.prior));
+    }
+
     uint64_t n = reach_index_.size();
     f.write(reinterpret_cast<const char*>(&n), sizeof(n));
     for (auto& [zh, entries] : reach_index_) {
         f.write(reinterpret_cast<const char*>(&zh), sizeof(zh));
-        uint32_t ne = entries.size();
+        uint32_t ne = (uint32_t)entries.size();
         f.write(reinterpret_cast<const char*>(&ne), sizeof(ne));
         for (auto& e : entries) {
-            f.write(reinterpret_cast<const char*>(&e.eco), sizeof(e.eco));
+            uint32_t elen = e.eco.size();
+            f.write(reinterpret_cast<const char*>(&elen), sizeof(elen));
+            f.write(e.eco.data(), elen);
             f.write(reinterpret_cast<const char*>(&e.prob), sizeof(e.prob));
             f.write(reinterpret_cast<const char*>(&e.path_length), sizeof(e.path_length));
         }
@@ -240,33 +254,37 @@ void ClassifierEngine::save_index(const string& path) const {
 
     uint64_t nboard = board_zh_.size();
     f.write(reinterpret_cast<const char*>(&nboard), sizeof(nboard));
-    for (auto& b : board_zh_) {
+    for (auto& b : board_zh_)
         f.write(reinterpret_cast<const char*>(&b), sizeof(Board));
-    }
 
-    cout << "Index saved to " << path << "\n";
+    cout << "Index saved to " << path
+         << " (" << nroots << " roots, " << n << " positions, " << nboard << " boards)\n";
 }
 
 void ClassifierEngine::load_index(const string& path) {
     ifstream f(path, ios::binary);
     if (!f) throw runtime_error("Cannot open index file: " + path);
 
+    roots_.clear();
     reach_index_.clear();
     board_zh_.clear();
 
-    uint64_t neco;
-    f.read(reinterpret_cast<char*>(&neco), sizeof(neco));
-    for (uint64_t i = 0; i < neco; i++) {
-        uint32_t elen;
+    uint64_t nroots;
+    f.read(reinterpret_cast<char*>(&nroots), sizeof(nroots));
+    roots_.resize(nroots);
+    for (uint64_t i = 0; i < nroots; i++) {
+        uint32_t elen, nlen;
         f.read(reinterpret_cast<char*>(&elen), sizeof(elen));
-        string eco(elen, '\0');
-        f.read(eco.data(), elen);
-        uint32_t nlen;
+        roots_[i].eco.resize(elen);
+        f.read(roots_[i].eco.data(), elen);
         f.read(reinterpret_cast<char*>(&nlen), sizeof(nlen));
-        string name(nlen, '\0');
-        f.read(name.data(), nlen);
+        roots_[i].name.resize(nlen);
+        f.read(roots_[i].name.data(), nlen);
+        f.read(reinterpret_cast<char*>(&roots_[i].board), sizeof(Board));
+        f.read(reinterpret_cast<char*>(&roots_[i].prior), sizeof(roots_[i].prior));
     }
 
+    // --- reach_index_ ---
     uint64_t n;
     f.read(reinterpret_cast<char*>(&n), sizeof(n));
     for (uint64_t i = 0; i < n; i++) {
@@ -274,21 +292,25 @@ void ClassifierEngine::load_index(const string& path) {
         f.read(reinterpret_cast<char*>(&zh), sizeof(zh));
         uint32_t ne;
         f.read(reinterpret_cast<char*>(&ne), sizeof(ne));
+        auto& vec = reach_index_[zh];
+        vec.resize(ne);
         for (uint32_t j = 0; j < ne; j++) {
-            string eco; float prob; uint8_t path_length;
-            f.read(reinterpret_cast<char*>(&eco), sizeof(eco));
-            f.read(reinterpret_cast<char*>(&prob), sizeof(prob));
-            f.read(reinterpret_cast<char*>(&path_length), sizeof(path_length));
-            reach_index_[zh].push_back({eco, prob, path_length});
+            uint32_t elen;
+            f.read(reinterpret_cast<char*>(&elen), sizeof(elen));
+            vec[j].eco.resize(elen);
+            f.read(vec[j].eco.data(), elen);
+            f.read(reinterpret_cast<char*>(&vec[j].prob), sizeof(vec[j].prob));
+            f.read(reinterpret_cast<char*>(&vec[j].path_length), sizeof(vec[j].path_length));
         }
     }
 
+    // --- board_zh_ ---
     uint64_t nboard;
     f.read(reinterpret_cast<char*>(&nboard), sizeof(nboard));
     board_zh_.resize(nboard);
-    for (uint64_t i = 0; i < nboard; i++) {
+    for (uint64_t i = 0; i < nboard; i++)
         f.read(reinterpret_cast<char*>(&board_zh_[i]), sizeof(Board));
-    }
+
     cout << "Index loaded from " << path
-         << " (" << reach_index_.size() << " positions, " << " ECOs)\n";
+         << " (" << nroots << " roots, " << n << " positions, " << nboard << " boards)\n";
 }

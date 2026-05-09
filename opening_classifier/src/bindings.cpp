@@ -12,7 +12,7 @@ PYBIND11_MODULE(chess_classifier, m) {
      py::class_<ScoredOpening>(m, "ScoredOpening")
           .def_readonly("eco", &ScoredOpening::eco)
           .def_readonly("name", &ScoredOpening::name)
-          .def_readonly("likelihood", &ScoredOpening::prob)
+          .def_readonly("probability", &ScoredOpening::prob)
           .def_readonly("posterior", &ScoredOpening::posterior)
           .def_readonly("path_length", &ScoredOpening::path_length)
           .def("__repr__", [](const ScoredOpening& s) {
