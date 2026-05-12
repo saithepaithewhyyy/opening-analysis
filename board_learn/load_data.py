@@ -2,6 +2,7 @@ import struct
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 import os
 
 
@@ -112,5 +113,13 @@ def clean_data(path, folder_path='.'):
     roots_df = pd.read_csv(folder_path + '/roots.csv')
     reach_index_df = pd.read_csv(folder_path + '/reach_index.csv')
     board_zh_df = pd.read_csv(folder_path + '/board_zh.csv')
-        
-    train_df = pd.merge(board_zh_df, reach_index_df, on='zobrist', how='left')
+    
+    eco_cols = roots_df['eco']
+    board_zh_df[eco_cols] = 0.0
+  
+    for _, row in board_zh_df.iterrows():
+        prob_values_df = reach_index_df[row['zobrist']]
+        for _, row2 in prob_values_df.iterrows():
+            row[row2['eco']] = row2['prob']
+            
+    
