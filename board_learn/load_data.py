@@ -106,7 +106,7 @@ def load_data(path, output_dir='.', save_format='csv'):
 
     return roots_df, reach_index_df, board_zh_df
 
-def clean_data(path, folder_path='.'):
+def clean_data(folder_path='.'):
     if ['roots.csv', 'reach_index.csv', 'board_zh.csv'] not in os.listdir(folder_path):
         load_data('index.bin')
         
