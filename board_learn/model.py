@@ -57,9 +57,9 @@ class OpeningModel(nn.Module):
         
     def rank_file_encode(self):
         rank = torch.arange(8).repeat_interleave(8)
-        file = torch.arange(8).repeat(8)
+        File = torch.arange(8).repeat(8)
         
-        embed = torch.cat([self.rank_embed(rank), self.file_embed(file)], dim=-1)
+        embed = torch.cat([self.rank_embed(rank), self.file_embed(File)], dim=-1)
         return embed
         
     def forward(self, bitboards, meta):
