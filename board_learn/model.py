@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -29,11 +30,11 @@ class OpeningModel(nn.Module):
         
         self.scalar = nn.Linear(n_flat, d_model)
         
-        self.sq_linear = nn.Linear(n_sq, d_model)
-        self.row_embed = nn.Embedding(8, d_model // 2)
-        self.col_embed = nn.Embedding(8, d_model // 2)
+        self.sq_linear = nn.Linear(n_bb-1, d_model)
+        self.rank_embed = nn.Embedding(8, d_model // 2)
+        self.file_embed = nn.Embedding(8, d_model // 2)
         
-        self.bb_linear = nn.Linear(n_bb, d_model)
+        self.bb_linear = nn.Linear(n_sq, d_model)
         self.bb_embed = nn.Embedding(n_bb, d_model)
         
         self.sq_transformer_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_ff, batch_first=True, norm_first=False)
@@ -54,6 +55,37 @@ class OpeningModel(nn.Module):
             nn.Linear(d_hidden, n_classes)
         )
         
-    def forward(self, x):
-        return x
+    def rank_file_encode(self):
+        rank = torch.arange(8).repeat_interleave(8)
+        file = torch.arange(8).repeat(8)
+        
+        embed = torch.cat([self.rank_embed(rank), self.file_embed(file)], dim=-1)
+        return embed
+        
+    def forward(self, bitboards, meta):
+        # bitboards shape - (b, 13, 64)
+        # meta shape - (b, n_flat)
+        
+        meta = self.scalar(meta)
+
+        sq = bitboards[:, 1:, :].permute(0, 2, 1)
+        sq = self.sq_linear(sq)
+        sq += self.rank_file_encode()
+        sq = self.sq_transformer(sq)
+        
+        bb = bitboards[:, :, :]
+        bb = self.bb_linear(bb)
+        bb += self.bb_embed(torch.arange(13, device=bb.device))
+        bb = self.bb_transformer(bb)
+        
+        sq = self.norm_sq(sq + self.cross_attn_sq(query=sq, key=bb, value=bb)[0])
+        bb = self.norm_bb(bb + self.cross_attn_bb(query=bb, key=sq, value=sq)[0])
+        
+        sq_out = sq.mean(dim=1)
+        bb_out = bb.mean(dim=1)
+        
+        op = torch.cat([sq_out, bb_out, meta], dim=-1)
+        op = self.ff(op)
+        
+        return op 
         
