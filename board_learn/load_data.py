@@ -107,19 +107,39 @@ def load_data(path, output_dir='.', save_format='csv'):
     return roots_df, reach_index_df, board_zh_df
 
 def clean_data(folder_path='.'):
-    if ['roots.csv', 'reach_index.csv', 'board_zh.csv'] not in os.listdir(folder_path):
-        load_data('index.bin')
-        
+    required = ['roots.csv', 'reach_index.csv', 'board_zh.csv']
+    if not all(f in os.listdir(folder_path) for f in required):
+        load_data('index.bin', output_dir=folder_path)
+
     roots_df = pd.read_csv(folder_path + '/roots.csv')
     reach_index_df = pd.read_csv(folder_path + '/reach_index.csv')
     board_zh_df = pd.read_csv(folder_path + '/board_zh.csv')
-    
-    eco_cols = roots_df['eco']
-    board_zh_df[eco_cols] = 0.0
-  
-    for _, row in board_zh_df.iterrows():
-        prob_values_df = reach_index_df[row['zobrist']]
-        for _, row2 in prob_values_df.iterrows():
-            row[row2['eco']] = row2['prob']
-            
-    
+
+    eco_classes = sorted(roots_df['eco'].unique())
+    eco_to_idx = {eco: i for i, eco in enumerate(eco_classes)}
+    n_classes = len(eco_classes)
+
+    target_map = {}
+    for zh, group in reach_index_df.groupby('zobrist'):
+        vec = np.zeros(n_classes, dtype=np.float32)
+        for _, row in group.iterrows():
+            idx = eco_to_idx.get(row['eco'])
+            if idx is not None:
+                vec[idx] = row['prob']
+        target_map[zh] = vec
+
+    bb_cols = ['board_occupied'] + [f'board_bb_{side}_{piece}' for side in range(2) for piece in range(6)]
+    bb_uint64 = board_zh_df[bb_cols].values.astype(np.uint64)
+    bb_bytes = bb_uint64.view(np.uint8).reshape(len(board_zh_df), 13, 8)
+    bitboards_all = np.unpackbits(bb_bytes, axis=2, bitorder='little').astype(np.float32)
+
+    scalars_all = board_zh_df[['board_castling', 'board_ep_sq', 'board_turn']].values.astype(np.float32)
+
+    zobrists = board_zh_df['zobrist'].astype(np.int64).values
+    targets_all = np.stack([
+        target_map.get(int(zh), np.zeros(n_classes, dtype=np.float32))
+        for zh in zobrists
+    ])
+
+    records = list(zip(zobrists.tolist(), bitboards_all, scalars_all, targets_all))
+    return records, eco_classes
