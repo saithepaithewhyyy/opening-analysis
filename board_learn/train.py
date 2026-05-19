@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Subset, DataLoader
+from sklearn.model_selection import train_test_split
 
 import load_data as ld
 import opening_model as om
@@ -21,6 +22,66 @@ class OpeningDataset(Dataset):
         return self.bitboards[idx], self.scalars[idx], self.targets[idx]
     
 def train():
+    
+    _, bb, sc, targets, eco_classes = ld.load_data()
+    dataset = OpeningDataset(bb, sc, targets)
+    
+    train_indices, test_indices = train_test_split(
+        range(len(dataset)),
+        test_size=0.2,
+        stratify=targets.argmax(axis=1),
+        random_state=42
+    )
+    
+    train_data = Subset(dataset, train_indices)
+    test_data = Subset(dataset, test_indices)
+    
+    train_loader = DataLoader(train_data, batch_size=512, shuffle=True, num_workers=4, pin_memory=True)
+    test_loader = DataLoader(test_data, batch_size=512, shuffle=True, num_workers=4, pin_memory=True)
+   
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = om.OpeningModel(n_classes=len(eco_classes)).to(device)
+    
+    criterion = nn.KLDivLoss(reduction='batchmean')
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-2)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=20)
+    
+    for epoch in range(20):
+        model.train()
+        total_loss = 0.0
+        
+        for bb, sc, target in train_loader:
+            bb = bb.to(device)
+            sc = sc.to(device)
+            target = sc.to(device)
+            
+            optimizer.zero_grad()
+            out = model(bb, sc)
+            loss = criterion(torch.log(out + 1e-9), target)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
+            total_loss += loss.item()
+            
+        scheduler.step()
+        
+        model.eval()
+        val_loss = 0
+        correct = 0
+        with torch.no_grad():
+            for bb, sc, target in test_loader:
+                bb = bb.to(device)
+                sc = sc.to(device)
+                target = target.to(device)
+                out = model(bb, sc)
+                val_loss += criterion(torch.log(out + 1e-9), target).item()
+                correct += (out.argmax(dim=1) == target.argmax(dim=1)).sum().item()
+
+        print(f"Epoch {epoch+1:02d} | train_loss={total_loss/len(train_loader):.4f} | "
+              f"val_loss={val_loss/len(test_loader):.4f} | "
+              f"val_acc={correct/len(test_data):.4f}")
+            
+    
     return
     
 if __name__ == "__main__":
