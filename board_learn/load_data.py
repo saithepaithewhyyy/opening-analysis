@@ -1,5 +1,6 @@
 import struct
 from pathlib import Path
+import os
 
 import pandas as pd
 import numpy as np
@@ -105,40 +106,44 @@ def parse_data(path, output_dir='.', save_format='csv'):
     return roots_df, reach_index_df, board_zh_df
 
 def load_data(folder_path='.'):
-    folder_path = Path(folder_path)
     required = ['roots.csv', 'reach_index.csv', 'board_zh.csv']
-    if not all((folder_path / f).exists() for f in required):
+    if not all(f in os.listdir(folder_path) for f in required):
         parse_data('index.bin', output_dir=folder_path)
 
-    roots_df = pd.read_csv(folder_path / 'roots.csv')
-    reach_index_df = pd.read_csv(folder_path / 'reach_index.csv')
-    board_zh_df = pd.read_csv(folder_path / 'board_zh.csv')
+    roots_df = pd.read_csv(folder_path + '/roots.csv')
+    reach_index_df = pd.read_csv(folder_path + '/reach_index.csv')
+    board_zh_df = pd.read_csv(folder_path + '/board_zh.csv') 
 
     eco_classes = sorted(roots_df['eco'].unique())
     eco_to_idx = {eco: i for i, eco in enumerate(eco_classes)}
     n_classes = len(eco_classes)
 
-    reach_index_df['eco_idx'] = reach_index_df['eco'].map(eco_to_idx)
-    valid = reach_index_df.dropna(subset=['eco_idx']).copy()
-    valid['eco_idx'] = valid['eco_idx'].astype(int)
-    unique_zh, inverse = np.unique(valid['zobrist'].values, return_inverse=True)
-    target_matrix = np.zeros((len(unique_zh), n_classes), dtype=np.float32)
-    np.add.at(target_matrix, (inverse, valid['eco_idx'].values), valid['prob'].values)
-    target_map = dict(zip(unique_zh.tolist(), target_matrix))
+    target_map = {}
+    for zh, group in reach_index_df.groupby('zobrist'):
+        vec = np.zeros(n_classes, dtype=np.float32)
+        for _, row in group.iterrows():
+            idx = eco_to_idx.get(row['eco'])
+            if idx is not None:
+                vec[idx] = row['prob']
+        target_map[zh] = vec
 
     bb_cols = ['board_occupied'] + [f'board_bb_{side}_{piece}' for side in range(2) for piece in range(6)]
-    bb_uint64 = board_zh_df[bb_cols].values.astype(np.uint64)
+    
+    bb_uint64 = np.stack([
+        board_zh_df[col].to_numpy(dtype=np.uint64) for col in bb_cols
+    ], axis=1)
     bb_bytes = bb_uint64.view(np.uint8).reshape(len(board_zh_df), 13, 8)
     bitboards_all = np.unpackbits(bb_bytes, axis=2, bitorder='little').astype(np.float32)
 
-    castling = board_zh_df['board_castling'].values.astype(np.uint8)
-    castling_bits = np.unpackbits(castling[:, None], axis=1, bitorder='little')[:, :4].astype(np.float32)
-
-    ep_sq = board_zh_df['board_ep_sq'].values.astype(np.int16)
+    castling = board_zh_df['board_castling'].to_numpy(dtype=np.uint32)
+    castling_bytes = castling.view(np.uint8).reshape(len(castling), 4)
+    castling_bits = np.unpackbits(castling_bytes, axis=1, bitorder='little')[:, :4].astype(np.float32)
+    
+    ep_sq = board_zh_df['board_ep_sq'].to_numpy(dtype=np.uint16)
     ep_present = (ep_sq < 64).astype(np.float32)
     ep_file = np.where(ep_sq < 64, ep_sq % 8, 0).astype(np.float32)
 
-    turn = board_zh_df['board_turn'].values.astype(np.float32)
+    turn = board_zh_df['board_turn'].to_numpy(dtype=np.float32)
 
     scalars_all = np.concatenate([turn[:, None], ep_present[:, None], ep_file[:, None], castling_bits], axis=1)
 

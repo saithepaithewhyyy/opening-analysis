@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, Dataloader
+from torch.utils.data import Dataset
 
 class OpeningDataset(Dataset):
     def __init__(self, bitboards_all, scalars_all, targets_all):
