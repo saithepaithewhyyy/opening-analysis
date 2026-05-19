@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 
+import load_data as ld
+import opening_model as om
+
 class OpeningDataset(Dataset):
     def __init__(self, bitboards_all, scalars_all, targets_all):
         # bitboards -> (n, 13, 64)
@@ -16,3 +19,9 @@ class OpeningDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.bitboards[idx], self.scalars[idx], self.targets[idx]
+    
+def train():
+    return
+    
+if __name__ == "__main__":
+    train()
