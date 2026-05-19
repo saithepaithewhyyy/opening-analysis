@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 # Model Architechture:- 
 # Dual Stream transformer approach
@@ -18,12 +17,12 @@ class OpeningModel(nn.Module):
                 n_classes,
                 n_bb = 13, 
                 n_sq = 64, 
-                n_flat = 8, 
+                n_flat = 7, 
                 d_model = 256, 
                 nhead = 8, 
                 num_layers = 6, 
-                d_ff = 256,
-                d_hidden = 1024,
+                d_ff = 1024,
+                d_hidden = 2048,
                 dropout = 0.1):
         
         super().__init__()
@@ -36,12 +35,16 @@ class OpeningModel(nn.Module):
         
         self.bb_linear = nn.Linear(n_sq, d_model)
         self.bb_embed = nn.Embedding(n_bb, d_model)
-        
-        self.sq_transformer_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_ff, batch_first=True, norm_first=False)
-        self.bb_transformer_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_ff, batch_first=True, norm_first=False)
-        
-        self.sq_transformer = nn.TransformerEncoder(self.sq_transformer_layer, num_layers=num_layers)
-        self.bb_transformer = nn.TransformerEncoder(self.bb_transformer_layer, num_layers=num_layers)
+
+        self.sq_transformer = nn.TransformerEncoder(                                                                             
+            nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_ff, batch_first=True, norm_first=False),
+            num_layers=num_layers                                                                                                
+        )
+
+        self.bb_transformer = nn.TransformerEncoder(                                                                             
+            nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_ff, batch_first=True, norm_first=False),
+            num_layers=num_layers                                                                                                
+        )
         
         self.cross_attn_sq = nn.MultiheadAttention(d_model, nhead, dropout=dropout, batch_first=True)
         self.cross_attn_bb = nn.MultiheadAttention(d_model, nhead, dropout=dropout, batch_first=True)
@@ -55,11 +58,11 @@ class OpeningModel(nn.Module):
             nn.Linear(d_hidden, n_classes)
         )
         
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(dim=-1)
         
-    def rank_file_encode(self):
-        rank = torch.arange(8).repeat_interleave(8)
-        File = torch.arange(8).repeat(8)
+    def rank_file_encode(self, device):
+        rank = torch.arange(8, device=device).repeat_interleave(8)
+        File = torch.arange(8, device=device).repeat(8)
         
         embed = torch.cat([self.rank_embed(rank), self.file_embed(File)], dim=-1)
         return embed
@@ -72,7 +75,7 @@ class OpeningModel(nn.Module):
 
         sq = bitboards[:, 1:, :].permute(0, 2, 1)
         sq = self.sq_linear(sq)
-        sq += self.rank_file_encode()
+        sq += self.rank_file_encode(device=sq.device)
         sq = self.sq_transformer(sq)
         
         bb = bitboards[:, :, :]
