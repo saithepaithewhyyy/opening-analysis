@@ -42,18 +42,20 @@ def train():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = om.OpeningModel(n_classes=len(eco_classes)).to(device)
     
+    num_epochs=20
+    
     criterion = nn.KLDivLoss(reduction='batchmean')
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-2)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=20)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
     
-    for epoch in range(20):
+    for epoch in range(num_epochs):
         model.train()
         total_loss = 0.0
         
         for bb, sc, target in train_loader:
             bb = bb.to(device)
             sc = sc.to(device)
-            target = sc.to(device)
+            target = target.to(device)
             
             optimizer.zero_grad()
             out = model(bb, sc)

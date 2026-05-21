@@ -58,8 +58,6 @@ class OpeningModel(nn.Module):
             nn.Linear(d_hidden, n_classes)
         )
         
-        self.softmax = nn.Softmax(dim=-1)
-        
     def rank_file_encode(self, device):
         rank = torch.arange(8, device=device).repeat_interleave(8)
         File = torch.arange(8, device=device).repeat(8)
@@ -92,5 +90,5 @@ class OpeningModel(nn.Module):
         op = torch.cat([sq_out, bb_out, meta], dim=-1)
         op = self.ff(op)
         
-        return self.softmax(op) 
+        return torch.log_softmax(op, dim=-1)
         
