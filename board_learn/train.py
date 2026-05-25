@@ -24,6 +24,11 @@ class OpeningDataset(Dataset):
 def train():
     
     _, bb, sc, targets, eco_classes = ld.load_data()
+    valid = targets.sum(axis=1) > 0
+    bb = bb[valid]
+    sc = sc[valid]
+    targets = targets[valid]
+
     dataset = OpeningDataset(bb, sc, targets)
     
     train_indices, test_indices = train_test_split(
@@ -48,6 +53,8 @@ def train():
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-2)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
     
+    scaler = torch.cuda.amp.GradScaler(enabled = (device.type=="cuda"))
+
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0.0
@@ -58,11 +65,16 @@ def train():
             target = target.to(device)
             
             optimizer.zero_grad()
-            out = model(bb, sc)
-            loss = criterion(torch.log(out + 1e-9), target)
-            loss.backward()
+
+            with torch.cuda.amp.autocast(enabled = (device.type=="cuda")):
+                out = model(bb, sc)
+                loss = criterion(out, target)
+
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
+            scaler.step(optimizer)
+            scaler.update()
             total_loss += loss.item()
             
         scheduler.step()
@@ -76,12 +88,10 @@ def train():
                 sc = sc.to(device)
                 target = target.to(device)
                 out = model(bb, sc)
-                val_loss += criterion(torch.log(out + 1e-9), target).item()
-                correct += (out.argmax(dim=1) == target.argmax(dim=1)).sum().item()
+                val_loss += criterion(out, target).item()
 
         print(f"Epoch {epoch+1:02d} | train_loss={total_loss/len(train_loader):.4f} | "
-              f"val_loss={val_loss/len(test_loader):.4f} | "
-              f"val_acc={correct/len(test_data):.4f}")
+              f"val_loss={val_loss/len(test_loader):.4f}")
             
     
     return
