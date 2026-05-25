@@ -17,7 +17,7 @@ class OpeningModel(nn.Module):
                 n_classes,
                 n_bb = 13, 
                 n_sq = 64, 
-                n_flat = 7, 
+                n_flat = 14, 
                 d_model = 256, 
                 nhead = 8, 
                 num_layers = 6, 
@@ -26,6 +26,8 @@ class OpeningModel(nn.Module):
                 dropout = 0.1):
         
         super().__init__()
+
+        self.n_bb = n_bb
         
         self.scalar = nn.Linear(n_flat, d_model)
         
@@ -37,12 +39,12 @@ class OpeningModel(nn.Module):
         self.bb_embed = nn.Embedding(n_bb, d_model)
 
         self.sq_transformer = nn.TransformerEncoder(                                                                             
-            nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_ff, batch_first=True, norm_first=False),
+            nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_ff, batch_first=True, norm_first=True),
             num_layers=num_layers                                                                                                
         )
 
         self.bb_transformer = nn.TransformerEncoder(                                                                             
-            nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_ff, batch_first=True, norm_first=False),
+            nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_ff, batch_first=True, norm_first=True),
             num_layers=num_layers                                                                                                
         )
         
@@ -78,7 +80,7 @@ class OpeningModel(nn.Module):
         
         bb = bitboards[:, :, :]
         bb = self.bb_linear(bb)
-        bb += self.bb_embed(torch.arange(13, device=bb.device))
+        bb += self.bb_embed(torch.arange(self.n_bb, device=bb.device))
         bb = self.bb_transformer(bb)
         
         sq = self.norm_sq(sq + self.cross_attn_sq(query=sq, key=bb, value=bb)[0])
