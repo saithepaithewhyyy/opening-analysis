@@ -21,11 +21,8 @@ bindings.cpp                — pybind11 Python bindings
 Opening book weights (`2*wins + draws`) are blended into move scoring proportionally, so book-supported moves are favoured during BFS without overriding the heuristics entirely.
  
 ## Requirements
- 
-- C++17
-- pybind11
-- OpenMP
-- A C++ compiler (GCC / Clang / MSVC)
+-
+
 ## Building
 
 Can be built via `pip install .` in chess_classifier. `inference.py` gives a rundown on how things work via Python bindings.
