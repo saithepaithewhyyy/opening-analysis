@@ -99,20 +99,20 @@ def parse_data(path, output_dir='.', save_format='csv'):
     reach_index_df = pd.DataFrame(reach_index_rows)
     board_zh_df = pd.DataFrame(board_zh_rows)
 
-    roots_df.to_csv(output_dir / 'roots.csv', index=False)
-    reach_index_df.to_csv(output_dir / 'reach_index.csv', index=False)
-    board_zh_df.to_csv(output_dir / 'board_zh.csv', index=False)
+    roots_df.to_parquet(output_dir / 'roots.csv', index=False)
+    reach_index_df.to_parquet(output_dir / 'reach_index.csv', index=False)
+    board_zh_df.to_parquet(output_dir / 'board_zh.csv', index=False)
 
     return roots_df, reach_index_df, board_zh_df
 
 def load_data(folder_path='.'):
     required = ['roots.csv', 'reach_index.csv', 'board_zh.csv']
     if not all(f in os.listdir(folder_path) for f in required):
-        parse_data('index.bin', output_dir=folder_path)
+        parse_data(Path(folder_path) / "index.bin", output_dir=folder_path)
 
-    roots_df = pd.read_csv(folder_path + '/roots.csv')
-    reach_index_df = pd.read_csv(folder_path + '/reach_index.csv')
-    board_zh_df = pd.read_csv(folder_path + '/board_zh.csv') 
+    roots_df = pd.read_parquet(folder_path + '/roots.parquet')
+    reach_index_df = pd.read_csv(folder_path + '/reach_index.parquet')
+    board_zh_df = pd.read_csv(folder_path + '/board_zh.parquet') 
 
     eco_classes = sorted(roots_df['eco'].unique())
     eco_to_idx = {eco: i for i, eco in enumerate(eco_classes)}
@@ -141,11 +141,13 @@ def load_data(folder_path='.'):
     
     ep_sq = board_zh_df['board_ep_sq'].to_numpy(dtype=np.uint16)
     ep_present = (ep_sq < 64).astype(np.float32)
-    ep_file = np.where(ep_sq < 64, ep_sq % 8, 0).astype(np.float32)
+    ep_file_oh= np.zeros((len(ep_sq), 8), dtype=np.float32)
+    valid = ep_sq < 64
+    ep_file_oh[valid, ep_sq[valid] % 8] = 1.0
 
     turn = board_zh_df['board_turn'].to_numpy(dtype=np.float32)
 
-    scalars_all = np.concatenate([turn[:, None], ep_present[:, None], ep_file[:, None], castling_bits], axis=1)
+    scalars_all = np.concatenate([turn[:, None], ep_present[:, None], castling_bits, ep_file_oh], axis=1)
 
     zobrists = board_zh_df['zobrist'].values
     targets_all = np.stack([
