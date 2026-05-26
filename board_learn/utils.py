@@ -32,4 +32,9 @@ def pos_to_bb(pos, type):
         bbs[PIECE_INDEX[piece] + 1] |= bit
 
     return bbs
+
+def inference_features(pos, type):
+    
+    bbs = pos_to_bb(pos, type)
+    
     

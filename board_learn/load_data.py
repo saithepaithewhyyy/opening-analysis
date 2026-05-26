@@ -41,7 +41,7 @@ def flatten_board(board):
 
     return row
 
-def parse_data(path, output_dir='.', save_format='csv'):
+def parse_data(path, output_dir='.'):
     path = Path(path)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

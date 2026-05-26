@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, Subset, DataLoader
@@ -48,12 +50,15 @@ def train():
     model = om.OpeningModel(n_classes=len(eco_classes)).to(device)
     
     num_epochs=20
+    checkpoint_dir = "checkpoints"
+    os.makedirs(checkpoint_dir, exist_ok=True)
     
     criterion = nn.KLDivLoss(reduction='batchmean')
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-2)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
     
-
+    best_val = float('inf')
+    
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0.0
@@ -76,7 +81,6 @@ def train():
         
         model.eval()
         val_loss = 0
-        correct = 0
         with torch.no_grad():
             for bb, sc, target in test_loader:
                 bb = bb.to(device)
@@ -84,11 +88,32 @@ def train():
                 target = target.to(device)
                 out = model(bb, sc)
                 val_loss += criterion(out, target).item()
+                
+        avg_train = total_loss / len(train_loader)
+        avg_val = val_loss / len(test_loader)
+                
+        checkpoint = {
+            'epoch': epoch + 1,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler.state_dict(),
+            'train_loss': avg_train,
+            'val_loss': avg_val,
+            'eco_classes': eco_classes,
+        }
+        
+        ckpt_path = os.path.join(checkpoint_dir, f"checkpoint_epoch{epoch+1:02d}.pt")
+        torch.save(checkpoint, ckpt_path)
+        
+        if avg_val < best_val:
+            best_val = avg_val
+            ckpt_path = os.path.join(checkpoint_dir, "best_model.pt")
+            torch.save(checkpoint, ckpt_path)
 
         print(f"Epoch {epoch+1:02d} | train_loss={total_loss/len(train_loader):.4f} | "
               f"val_loss={val_loss/len(test_loader):.4f}")
             
-    
+    torch.save(checkpoint, os.path.join(checkpoint_dir, "final_model.pt"))
     return
     
 if __name__ == "__main__":
