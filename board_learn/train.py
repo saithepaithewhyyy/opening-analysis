@@ -53,7 +53,6 @@ def train():
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-2)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
     
-    scaler = torch.cuda.amp.GradScaler(enabled = (device.type=="cuda"))
 
     for epoch in range(num_epochs):
         model.train()
@@ -65,16 +64,12 @@ def train():
             target = target.to(device)
             
             optimizer.zero_grad()
-
-            with torch.cuda.amp.autocast(enabled = (device.type=="cuda")):
-                out = model(bb, sc)
-                loss = criterion(out, target)
-
-            scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
+                        
+            out = model(bb, sc)
+            loss = criterion(torch.log(out + 1e-9), target)
+            loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            scaler.step(optimizer)
-            scaler.update()
+            optimizer.step()
             total_loss += loss.item()
             
         scheduler.step()
