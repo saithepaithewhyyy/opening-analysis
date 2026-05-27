@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 
-BOARD_FORMAT = '<12QQI2BQ'
+BOARD_FORMAT = '<12QQI2BxxQ'
 BOARD_SIZE = struct.calcsize(BOARD_FORMAT)
 
 
@@ -99,20 +99,20 @@ def parse_data(path, output_dir='.'):
     reach_index_df = pd.DataFrame(reach_index_rows)
     board_zh_df = pd.DataFrame(board_zh_rows)
 
-    roots_df.to_parquet(output_dir / 'roots.csv', index=False)
-    reach_index_df.to_parquet(output_dir / 'reach_index.csv', index=False)
-    board_zh_df.to_parquet(output_dir / 'board_zh.csv', index=False)
+    roots_df.to_parquet(output_dir / 'roots.parquet', index=False)
+    reach_index_df.to_parquet(output_dir / 'reach_index.parquet', index=False)
+    board_zh_df.to_parquet(output_dir / 'board_zh.parquet', index=False)
 
     return roots_df, reach_index_df, board_zh_df
 
 def load_data(folder_path='.'):
-    required = ['roots.csv', 'reach_index.csv', 'board_zh.csv']
+    required = ['roots.parquet', 'reach_index.parquet', 'board_zh.parquet']
     if not all(f in os.listdir(folder_path) for f in required):
         parse_data(Path(folder_path) / "index.bin", output_dir=folder_path)
 
     roots_df = pd.read_parquet(folder_path + '/roots.parquet')
-    reach_index_df = pd.read_csv(folder_path + '/reach_index.parquet')
-    board_zh_df = pd.read_csv(folder_path + '/board_zh.parquet') 
+    reach_index_df = pd.read_parquet(folder_path + '/reach_index.parquet')
+    board_zh_df = pd.read_parquet(folder_path + '/board_zh.parquet')
 
     eco_classes = sorted(roots_df['eco'].unique())
     eco_to_idx = {eco: i for i, eco in enumerate(eco_classes)}
@@ -158,4 +158,4 @@ def load_data(folder_path='.'):
     return zobrists, bitboards_all, scalars_all, targets_all, eco_classes
 
 if __name__ == "__main__":
-    zobrists, bitboards_all, scalars_all, targets_all, eco_classes = load_data()
+    zobrists, bitboards_all, scalars_all, targets_all, eco_classes = load_data(folder_path="..")
