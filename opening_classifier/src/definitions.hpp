@@ -24,6 +24,6 @@
     }
     inline int clzll(unsigned long long x){
         if (x==0) return -1;
-        return __builtin_clzll(x);
+        return 63 - __builtin_clzll(x);
     }
 #endif
