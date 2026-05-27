@@ -4,6 +4,7 @@ import os
 
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 
 
 BOARD_FORMAT = '<12QQI2BxxQ'
@@ -50,10 +51,11 @@ def parse_data(path, output_dir='.'):
     reach_index_rows = []
     board_zh_rows = []
 
+    print("loading data from index....")
     with open(path, 'rb') as f:
         nroots = struct.unpack('<Q', f.read(8))[0]
-
-        for root_id in range(nroots):
+        print("loading ECO roots....")
+        for root_id in tqdm(range(nroots), desc="ECO roots"):
             eco = read_str(f)
             name = read_str(f)
             board = parse_board(f.read(BOARD_SIZE))
@@ -70,7 +72,8 @@ def parse_data(path, output_dir='.'):
 
         n = struct.unpack('<Q', f.read(8))[0]
 
-        for reach_id in range(n):
+        print("loading positions....")
+        for reach_id in tqdm(range(n), desc="positions"):
             zh = struct.unpack('<Q', f.read(8))[0]
             ne = struct.unpack('<I', f.read(4))[0]
 
@@ -86,7 +89,8 @@ def parse_data(path, output_dir='.'):
 
         nboard = struct.unpack('<Q', f.read(8))[0]
 
-        for board_id in range(nboard):
+        print("loading position board data...")
+        for board_id in tqdm(range(nboard), desc="board data"):
             board = parse_board(f.read(BOARD_SIZE))
 
             row = {
