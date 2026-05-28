@@ -10,6 +10,7 @@
 #include <chrono>
 #include <omp.h>
 #include <atomic>
+#include <unordered_set>
 
 using namespace std;
 
@@ -156,10 +157,14 @@ void ClassifierEngine::build_index(int max_depth, double min_log_prob) {
     }
     local_indices.clear();  
 
-    for (auto& local : local_board_zh)
-        for (auto& entry : local)
-            board_zh_.push_back(entry);
-
+    unordered_set<uint64_t> seen_zh;
+    for (auto& local : local_board_zh){
+        for (auto& entry : local){
+            if (seen_zh.insert(entry.zobrist).second){
+                board_zh_.push_back(entry);
+            }
+        }
+    }    
     cout << "Index built. " << reach_index_.size() << " unique positions indexed.\n";
 }
 
