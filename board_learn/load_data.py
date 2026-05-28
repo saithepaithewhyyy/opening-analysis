@@ -58,16 +58,16 @@ def parse_data(path, output_dir='.'):
         for root_id in tqdm(range(nroots), desc="ECO roots"):
             eco = read_str(f)
             name = read_str(f)
-            board = parse_board(f.read(BOARD_SIZE))
-            prior = struct.unpack('<d', f.read(8))[0]
+            # board = parse_board(f.read(BOARD_SIZE))
+            # prior = struct.unpack('<d', f.read(8))[0]
 
             row = {
                 'root_id': root_id,
                 'eco': eco,
                 'name': name,
-                'prior': prior,
+                # 'prior': prior,
             }
-            row.update(flatten_board(board))
+            # row.update(flatten_board(board))
             roots_rows.append(row)
 
         n = struct.unpack('<Q', f.read(8))[0]
@@ -84,7 +84,7 @@ def parse_data(path, output_dir='.'):
                     'entry_id': entry_id,
                     'eco': read_str(f),
                     'prob': struct.unpack('<f', f.read(4))[0],
-                    'path_length': struct.unpack('<B', f.read(1))[0],
+                    # 'path_length': struct.unpack('<B', f.read(1))[0],
                 })
 
         nboard = struct.unpack('<Q', f.read(8))[0]

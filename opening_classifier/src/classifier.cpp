@@ -238,8 +238,8 @@ void ClassifierEngine::save_index(const string& path) const {
         f.write(r.eco.data(), elen);
         f.write(reinterpret_cast<const char*>(&nlen), sizeof(nlen));
         f.write(r.name.data(), nlen);
-        f.write(reinterpret_cast<const char*>(&r.board), sizeof(Board));
-        f.write(reinterpret_cast<const char*>(&r.prior), sizeof(r.prior));
+        // f.write(reinterpret_cast<const char*>(&r.board), sizeof(Board));
+        // f.write(reinterpret_cast<const char*>(&r.prior), sizeof(r.prior));
     }
 
     uint64_t n = reach_index_.size();
@@ -253,7 +253,7 @@ void ClassifierEngine::save_index(const string& path) const {
             f.write(reinterpret_cast<const char*>(&elen), sizeof(elen));
             f.write(e.eco.data(), elen);
             f.write(reinterpret_cast<const char*>(&e.prob), sizeof(e.prob));
-            f.write(reinterpret_cast<const char*>(&e.path_length), sizeof(e.path_length));
+            // f.write(reinterpret_cast<const char*>(&e.path_length), sizeof(e.path_length));
         }
     }
 
@@ -285,8 +285,8 @@ void ClassifierEngine::load_index(const string& path) {
         f.read(reinterpret_cast<char*>(&nlen), sizeof(nlen));
         roots_[i].name.resize(nlen);
         f.read(roots_[i].name.data(), nlen);
-        f.read(reinterpret_cast<char*>(&roots_[i].board), sizeof(Board));
-        f.read(reinterpret_cast<char*>(&roots_[i].prior), sizeof(roots_[i].prior));
+        // f.read(reinterpret_cast<char*>(&roots_[i].board), sizeof(Board));
+        // f.read(reinterpret_cast<char*>(&roots_[i].prior), sizeof(roots_[i].prior));
     }
 
     uint64_t n;
@@ -304,7 +304,7 @@ void ClassifierEngine::load_index(const string& path) {
             vec[j].eco.resize(elen);
             f.read(vec[j].eco.data(), elen);
             f.read(reinterpret_cast<char*>(&vec[j].prob), sizeof(vec[j].prob));
-            f.read(reinterpret_cast<char*>(&vec[j].path_length), sizeof(vec[j].path_length));
+            // f.read(reinterpret_cast<char*>(&vec[j].path_length), sizeof(vec[j].path_length));
         }
     }
 
