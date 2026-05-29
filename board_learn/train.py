@@ -7,32 +7,11 @@ from sklearn.model_selection import train_test_split
 
 import load_data as ld
 import opening_model as om
-
-class OpeningDataset(Dataset):
-    def __init__(self, bitboards_all, scalars_all, targets_all):
-        # bitboards -> (n, 13, 64)
-        # scalars -> (n, 7 or 8 idk i might change it)
-        # targets -> (n, n_classes)
-        self.bitboards = torch.from_numpy(bitboards_all)
-        self.scalars = torch.from_numpy(scalars_all)
-        self.targets = torch.from_numpy(targets_all)
-
-    def __len__(self):
-        return len(self.bitboards)
-
-    def __getitem__(self, idx):
-        return self.bitboards[idx], self.scalars[idx], self.targets[idx]
+import opening_dataset as od
     
 def train():
-    
-    _, bb, sc, targets, eco_classes = ld.load_data()
-    valid = targets.sum(axis=1) > 0
-    bb = bb[valid]
-    sc = sc[valid]
-    targets = targets[valid]
 
-    dataset = OpeningDataset(bb, sc, targets)
-    
+    dataset = od.make_save_data()
     train_indices, test_indices = train_test_split(
         range(len(dataset)),
         test_size=0.2,
