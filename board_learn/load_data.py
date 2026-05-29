@@ -112,25 +112,19 @@ def parse_data(path, output_dir='.'):
 def load_data(folder_path='.'):
     required = ['roots.parquet', 'reach_index.parquet', 'board_zh.parquet']
     if not all(f in os.listdir(folder_path) for f in required):
-        parse_data(Path(folder_path) / "index.bin", output_dir=folder_path)
+        parse_data("../index.bin", output_dir=folder_path)
 
+    print("loading into training set...")
     roots_df = pd.read_parquet(folder_path + '/roots.parquet')
     reach_index_df = pd.read_parquet(folder_path + '/reach_index.parquet')
     board_zh_df = pd.read_parquet(folder_path + '/board_zh.parquet')
 
+    print("loading eco's...")
     eco_classes = sorted(roots_df['eco'].unique())
     eco_to_idx = {eco: i for i, eco in enumerate(eco_classes)}
     n_classes = len(eco_classes)
 
-    target_map = {}
-    for zh, group in reach_index_df.groupby('zobrist'):
-        vec = np.zeros(n_classes, dtype=np.float32)
-        for _, row in group.iterrows():
-            idx = eco_to_idx.get(row['eco'])
-            if idx is not None:
-                vec[idx] = row['prob']
-        target_map[zh] = vec
-
+    print("loading bitboard data...")
     bb_cols = ['board_occupied'] + [f'board_bb_{side}_{piece}' for side in range(2) for piece in range(6)]
     
     bb_uint64 = np.stack([
@@ -153,7 +147,19 @@ def load_data(folder_path='.'):
 
     scalars_all = np.concatenate([turn[:, None], ep_present[:, None], castling_bits, ep_file_oh], axis=1)
 
+    print("loading zobrists...")
     zobrists = board_zh_df['zobrist'].values
+
+    print("loading targets...")
+    target_map = {}
+    for zh, group in tqdm(reach_index_df.groupby('zobrist'), desc="targets"):
+        vec = np.zeros(n_classes, dtype=np.float32)
+        for _, row in group.iterrows():
+            idx = eco_to_idx.get(row['eco'])
+            if idx is not None:
+                vec[idx] = row['prob']
+        target_map[zh] = vec
+
     targets_all = np.stack([
         target_map.get(int(zh), np.zeros(n_classes, dtype=np.float32))
         for zh in zobrists
@@ -162,4 +168,8 @@ def load_data(folder_path='.'):
     return zobrists, bitboards_all, scalars_all, targets_all, eco_classes
 
 if __name__ == "__main__":
-    zobrists, bitboards_all, scalars_all, targets_all, eco_classes = load_data(folder_path="..")
+    folder_path = "../parquet"
+    required = ['roots.parquet', 'reach_index.parquet', 'board_zh.parquet']
+    if not all(f in os.listdir(folder_path) for f in required):
+        parse_data( "../index.bin", output_dir=folder_path)
+    zobrists, bitboards_all, scalars_all, targets_all, eco_classes = load_data(folder_path=folder_path)
