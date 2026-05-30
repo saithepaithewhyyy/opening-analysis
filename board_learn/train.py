@@ -1,9 +1,11 @@
 import os
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, Subset, DataLoader
 from sklearn.model_selection import train_test_split
+from tqdm import tqdm
 
 import load_data as ld
 import opening_model as om
@@ -12,10 +14,15 @@ import opening_dataset as od
 def train():
 
     dataset = od.make_save_data()
+    labels = dataset.targets_all.argmax(axis=1)
+    counts = np.bincount(labels)
+    valid_mask = counts[labels] >= 2
+    valid_indices = np.where(valid_mask)[0]
+
     train_indices, test_indices = train_test_split(
-        range(len(dataset)),
+        valid_indices,
         test_size=0.2,
-        stratify=targets.argmax(axis=1),
+        stratify=labels[valid_indices],
         random_state=42
     )
     
@@ -25,10 +32,13 @@ def train():
     train_loader = DataLoader(train_data, batch_size=512, shuffle=True, num_workers=4, pin_memory=True)
     test_loader = DataLoader(test_data, batch_size=512, shuffle=True, num_workers=4, pin_memory=True)
    
+    eco_classes = dataset.eco_classes
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = om.OpeningModel(n_classes=len(eco_classes)).to(device)
+    model = torch.compile(model)
     
     num_epochs=20
+    print(f"number of epochs: {num_epochs}")
     checkpoint_dir = "checkpoints"
     os.makedirs(checkpoint_dir, exist_ok=True)
     
@@ -38,7 +48,8 @@ def train():
     
     best_val = float('inf')
     
-    for epoch in range(num_epochs):
+    print(f"Training Starting on {device}...")
+    for epoch in tqdm(range(num_epochs)):
         model.train()
         total_loss = 0.0
         
@@ -50,7 +61,7 @@ def train():
             optimizer.zero_grad()
                         
             out = model(bb, sc)
-            loss = criterion(torch.log(out + 1e-9), target)
+            loss = criterion(out, target)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
