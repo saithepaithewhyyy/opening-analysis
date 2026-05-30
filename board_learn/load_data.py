@@ -9,7 +9,8 @@ from tqdm import tqdm
 
 BOARD_FORMAT = '<12QQI2BxxQ'
 BOARD_SIZE = struct.calcsize(BOARD_FORMAT)
-
+FOLDER_PATH = "../parquet"
+INDEX_PATH = "../index.bin"
 
 def parse_board(raw):
     vals = struct.unpack(BOARD_FORMAT, raw)
@@ -112,7 +113,7 @@ def parse_data(path, output_dir='.'):
 def load_data(folder_path='.'):
     required = ['roots.parquet', 'reach_index.parquet', 'board_zh.parquet']
     if not all(f in os.listdir(folder_path) for f in required):
-        parse_data("../index.bin", output_dir=folder_path)
+        parse_data(INDEX_PATH, output_dir=folder_path)
 
     print("loading into training set...")
     roots_df = pd.read_parquet(folder_path + '/roots.parquet')
@@ -168,8 +169,4 @@ def load_data(folder_path='.'):
     return zobrists, bitboards_all, scalars_all, targets_all, eco_classes
 
 if __name__ == "__main__":
-    folder_path = "../parquet"
-    required = ['roots.parquet', 'reach_index.parquet', 'board_zh.parquet']
-    if not all(f in os.listdir(folder_path) for f in required):
-        parse_data( "../index.bin", output_dir=folder_path)
-    zobrists, bitboards_all, scalars_all, targets_all, eco_classes = load_data(folder_path=folder_path)
+    zobrists, bitboards_all, scalars_all, targets_all, eco_classes = load_data(folder_path=FOLDER_PATH)
