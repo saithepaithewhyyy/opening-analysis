@@ -10,6 +10,7 @@ from tqdm import tqdm
 import load_data as ld
 import opening_model as om
 import opening_dataset as od
+from opening_dataset import OpeningDataset
     
 def train():
 
