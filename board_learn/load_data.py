@@ -159,7 +159,8 @@ def load_data(folder_path='.'):
             idx = eco_to_idx.get(row['eco'])
             if idx is not None:
                 vec[idx] = row['prob']
-        target_map[zh] = vec
+        s = vec.sum()
+        target_map[zh] = vec / s if s > 0 else vec
 
     targets_all = np.stack([
         target_map.get(int(zh), np.zeros(n_classes, dtype=np.float32))
