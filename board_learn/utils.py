@@ -6,11 +6,11 @@ PIECE_INDEX = {
     'p': 6, 'n': 7, 'b': 8, 'r': 9, 'q': 10, 'k': 11,
 }
 
-def pos_to_bb(pos, type):
+def pos_to_bb(pos, form='fen'):
     bbs = np.zeros(13, dtype=np.uint64)
     squares = {}
 
-    if type == 'fen':
+    if form == 'fen':
         board_part = pos.split()[0]
         rank, file = 7, 0
         for ch in board_part:
@@ -33,8 +33,10 @@ def pos_to_bb(pos, type):
 
     return bbs
 
-def inference_features(pos, type):
+def inference_features(pos, form):
+    bb = pos_to_bb(pos, form)
+    scalars = 0
     
-    bbs = pos_to_bb(pos, type)
+    return bb, scalars
     
     
