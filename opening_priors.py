@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from typing import Dict, Optional
 import chess
 import json
-import inference
+import demo
 from tqdm import tqdm
 
 load_dotenv()
@@ -62,4 +62,4 @@ def get_priors(eco_fen: Dict[str, Optional[str]]) -> Dict[str, Optional[float]]:
     return priors
 
 if __name__ == "__main__":
-    inference.load_data()
+    demo.load_data()
