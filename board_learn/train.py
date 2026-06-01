@@ -38,7 +38,7 @@ def train():
     model = om.OpeningModel(n_classes=len(eco_classes)).to(device)
     model = torch.compile(model)
     
-    num_epochs=20
+    num_epochs = len(train_loader)
     print(f"number of epochs: {num_epochs}")
     checkpoint_dir = "checkpoints"
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -48,7 +48,6 @@ def train():
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
     
     best_val = float('inf')
-    
     total_loss = 0.0
     print(f"Training Starting on {device}...")
     # for epoch in tqdm(range(num_epochs)):
@@ -66,10 +65,13 @@ def train():
         out = model(bb, sc)
         loss = criterion(out, target)
         loss.backward()
+        
+        grad_norm_unclipped = sum(p.grad.norm().item() ** 2 for p in model.parameters() if p.grad is not None) ** 0.5
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        grad_norm_clipped = sum(p.grad.norm().item() ** 2 for p in model.parameters() if p.grad is not None) ** 0.5
+        
         optimizer.step()
-        total_loss += loss.item()
-            
+        total_loss += loss.item()   
         scheduler.step()
         
         model.eval()
@@ -82,7 +84,7 @@ def train():
                 out_test = model(bb_test, sc_test)
                 val_loss += criterion(out_test, target_test).item()
                 
-        avg_train = total_loss / len(train_loader)
+        avg_train = total_loss / (i+1)
         avg_val = val_loss / len(test_loader)
                 
         checkpoint = {
@@ -104,7 +106,9 @@ def train():
             torch.save(checkpoint, ckpt_path)
 
         print(f"Epoch {i+1:02d} | train_loss={total_loss/len(train_loader):.4f} | "
-              f"val_loss={val_loss/len(test_loader):.4f}")
+              f"val_loss={val_loss/len(test_loader):.4f} | "
+              f"gradient norm unclipped={grad_norm_unclipped:.4f} | "
+              f"gradient norm clipped={grad_norm_clipped:.4f}")
             
     torch.save(checkpoint, os.path.join(checkpoint_dir, "final_model.pt"))
     return
