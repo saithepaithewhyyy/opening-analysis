@@ -11,6 +11,7 @@ def inference(pos, form, checkpoint_dir="checkpoints"):
     model = om.OpeningModel(n_classes=4000).to(device)
     model.load_state_dict(torch.load(os.path.join(checkpoint_dir, "final_model.pt")))
     model = torch.compile(model)
+    model.eval()
     
     bb, sc = utils.inference_features(pos, form)
     out = model(bb, sc)
