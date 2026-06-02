@@ -1,10 +1,34 @@
 import pandas as pd
 import numpy as np
 
+import torch
+
 PIECE_INDEX = {
     'P': 0, 'N': 1, 'B': 2, 'R': 3, 'Q': 4, 'K': 5,
     'p': 6, 'n': 7, 'b': 8, 'r': 9, 'q': 10, 'k': 11,
 }
+
+def sparse_kl_loss(log_q, sparse_targets):
+    loss = 0.0
+    for b, (idxs, probs) in enumerate(sparse_targets):
+
+        idxs = torch.as_tensor(
+            idxs,
+            dtype=torch.long,
+            device=log_q.device
+        )
+
+        probs = torch.as_tensor(
+            probs,
+            dtype=log_q.dtype,
+            device=log_q.device
+        )
+
+        # KL Div Loss anyways. For sparse, we dont even care about the zero classes do we
+        loss += (probs * (torch.log(probs)- log_q[b, idxs])).sum()
+
+    return loss / len(sparse_targets)
+
 
 def pos_to_bb(pos, form='fen'):
     bbs = np.zeros(13, dtype=np.uint64)

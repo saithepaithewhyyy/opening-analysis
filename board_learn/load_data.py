@@ -154,23 +154,39 @@ def load_data(folder_path='.'):
     print("loading targets...")
     target_map = {}
     for zh, group in tqdm(reach_index_df.groupby('zobrist'), desc="targets"):
-        vec = np.zeros(n_classes, dtype=np.float16)
+        idxs = []
+        probs = []
         for _, row in group.iterrows():
-            idx = eco_to_idx.get(row['eco'])
+            idx = eco_to_idx.get(row["eco"])
             if idx is not None:
-                vec[idx] = row['prob']
-        s = vec.sum()
-        target_map[zh] = vec / s if s > 0 else vec
+                idxs.append(idx)
+                probs.append(row["prob"])
 
-    targets_all = np.stack([
-        target_map.get(int(zh), np.zeros(n_classes, dtype=np.float16))
+        probs = np.asarray(probs, dtype=np.float16)
+        s = probs.sum()
+        if s > 0:
+            probs /= s
+
+        target_map[zh] = (
+            np.asarray(idxs, dtype=np.uint16),
+            probs
+        )
+
+    targets_all = [
+        target_map.get(
+            int(zh),
+            (
+                np.empty(0, dtype=np.uint16),
+                np.empty(0, dtype=np.float16)
+            )
+        )
         for zh in zobrists
-    ])
+    ]
 
 
     print(f"bitboard storage: {bitboards_all.nbytes / 1024**3 :.4f}")
     print(f"scalar storage: {scalars_all.nbytes / 1024**3 :.4f}")
-    print(f"targets storage: {targets_all.nbytes / 1024**3 :.4f}")
+    print(f"targets storage: {sum(idxs.nbytes + probs.nbytes for idxs, probs in targets_all) / 1024**3 :.4f}")
 
     return zobrists, bitboards_all, scalars_all, targets_all, eco_classes
 

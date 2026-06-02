@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
@@ -12,7 +13,7 @@ class OpeningDataset(Dataset):
         # targets -> (n, n_classes)
         self.bitboards = torch.from_numpy(bitboards_all)
         self.scalars = torch.from_numpy(scalars_all)
-        self.targets = torch.from_numpy(targets_all)
+        self.targets = targets_all
         self.targets_all = targets_all
         self.eco_classes = eco_classes
 
@@ -20,7 +21,16 @@ class OpeningDataset(Dataset):
         return len(self.bitboards)
 
     def __getitem__(self, idx):
-        return self.bitboards[idx], self.scalars[idx], self.targets[idx]
+        return self.bitboards[idx].float(), self.scalars[idx].float(), self.targets[idx]
+    
+def opening_collate(batch):
+
+    bb, sc, targets = zip(*batch)
+    return (
+        torch.stack(bb),
+        torch.stack(sc),
+        targets
+    )
     
     
 def make_save_data(folder_path=".."):
@@ -29,10 +39,13 @@ def make_save_data(folder_path=".."):
         return dataset
     
     _, bb, sc, targets, eco_classes = ld.load_data("../parquet")
-    valid = targets.sum(axis=1) > 0
+    valid = np.array([
+        len(idxs) > 0
+        for idxs, probs in targets
+    ])
     bb = bb[valid]
     sc = sc[valid]
-    targets = targets[valid]
+    targets = [ targets[i] for i in np.where(valid)[0]]
 
     dataset = OpeningDataset(bb, sc, targets, eco_classes)
     torch.save(dataset, folder_path + "/dataset.pt", pickle_protocol=4)
