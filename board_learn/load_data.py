@@ -112,7 +112,7 @@ def parse_data(path, output_dir='.'):
 
 def load_data(folder_path='.'):
     required = ['roots.parquet', 'reach_index.parquet', 'board_zh.parquet']
-    if not all(f in os.listdir(folder_path) for f in required):
+    if not os.path.exists(folder_path) or not all(f in os.listdir(folder_path) for f in required):
         parse_data(INDEX_PATH, output_dir=folder_path)
 
     print("loading into training set...")
@@ -132,19 +132,19 @@ def load_data(folder_path='.'):
         board_zh_df[col].to_numpy(dtype=np.uint64) for col in bb_cols
     ], axis=1)
     bb_bytes = bb_uint64.view(np.uint8).reshape(len(board_zh_df), 13, 8)
-    bitboards_all = np.unpackbits(bb_bytes, axis=2, bitorder='little').astype(np.float32)
+    bitboards_all = np.unpackbits(bb_bytes, axis=2, bitorder='little').astype(np.uint8)
 
     castling = board_zh_df['board_castling'].to_numpy(dtype=np.uint32)
     castling_bytes = castling.view(np.uint8).reshape(len(castling), 4)
-    castling_bits = np.unpackbits(castling_bytes, axis=1, bitorder='little')[:, :4].astype(np.float32)
+    castling_bits = np.unpackbits(castling_bytes, axis=1, bitorder='little')[:, :4].astype(np.uint8)
     
     ep_sq = board_zh_df['board_ep_sq'].to_numpy(dtype=np.uint16)
-    ep_present = (ep_sq < 64).astype(np.float32)
-    ep_file_oh= np.zeros((len(ep_sq), 8), dtype=np.float32)
+    ep_present = (ep_sq < 64).astype(np.uint8)
+    ep_file_oh= np.zeros((len(ep_sq), 8), dtype=np.uint8)
     valid = ep_sq < 64
     ep_file_oh[valid, ep_sq[valid] % 8] = 1.0
 
-    turn = board_zh_df['board_turn'].to_numpy(dtype=np.float32)
+    turn = board_zh_df['board_turn'].to_numpy(dtype=np.uint8)
 
     scalars_all = np.concatenate([turn[:, None], ep_present[:, None], castling_bits, ep_file_oh], axis=1)
 
@@ -154,7 +154,7 @@ def load_data(folder_path='.'):
     print("loading targets...")
     target_map = {}
     for zh, group in tqdm(reach_index_df.groupby('zobrist'), desc="targets"):
-        vec = np.zeros(n_classes, dtype=np.float32)
+        vec = np.zeros(n_classes, dtype=np.float16)
         for _, row in group.iterrows():
             idx = eco_to_idx.get(row['eco'])
             if idx is not None:
@@ -163,9 +163,14 @@ def load_data(folder_path='.'):
         target_map[zh] = vec / s if s > 0 else vec
 
     targets_all = np.stack([
-        target_map.get(int(zh), np.zeros(n_classes, dtype=np.float32))
+        target_map.get(int(zh), np.zeros(n_classes, dtype=np.float16))
         for zh in zobrists
     ])
+
+
+    print(f"bitboard storage: {bitboards_all.nbytes / 1024**3 :.4f}")
+    print(f"scalar storage: {scalars_all.nbytes / 1024**3 :.4f}")
+    print(f"targets storage: {targets_all.nbytes / 1024**3 :.4f}")
 
     return zobrists, bitboards_all, scalars_all, targets_all, eco_classes
 
