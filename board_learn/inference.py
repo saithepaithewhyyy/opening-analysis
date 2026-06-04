@@ -1,18 +1,25 @@
 import utils
 import os
 import torch
+import pickle
 
 import opening_model as om
 
-def inference(pos, form, topk=5, checkpoint_dir="checkpoints"):
+def inference(pos, form="fen", topk=5, checkpoint_dir="checkpoints"):
+    device = torch.device('cuda' if torch.cuda.is_available()
+                        else 'mps' if torch.backends.mps.is_available()
+                        else 'cpu')
+    
+    with open(os.path.join(checkpoint_dir, "eco_classes.pkl"), "rb") as f:
+        eco_classes = pickle.load(f)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # how do i import num_classes eco_classes?
-    eco_classes = []
-    model = om.OpeningModel(n_classes=4000).to(device)
-    model.load_state_dict(torch.load(os.path.join(checkpoint_dir, "final_model.pt")))
+    model = om.OpeningModel(n_classes=len(eco_classes)).to(device)
+    ckpt = torch.load(os.path.join(checkpoint_dir, "final_model.pt"))
     model = torch.compile(model)
+    model.load_state_dict(ckpt["model_state_dict"])
     bb, sc = utils.inference_features(pos, form)
+    bb = torch.as_tensor(bb, dtype=torch.float32, device=device).unsqueeze(0)
+    sc = torch.as_tensor(sc, dtype=torch.float32, device=device).unsqueeze(0)
     
     with torch.no_grad():
         out = model(bb, sc)
@@ -20,9 +27,15 @@ def inference(pos, form, topk=5, checkpoint_dir="checkpoints"):
     topk_probs, topk_idx = probs.topk(topk, dim=-1)
    
     for b in range(len(topk_idx)):
-        print("Top {topk} predicted openings with probabilities \n")
-        print("------------------------------------------------------------")
+        print("---------------------------------")
+        print(f"Top {topk} possible openings")
+        print("---------------------------------")
+        max_len = max(len(name) for name in eco_classes)
         for idx, prob in zip(topk_idx[b].tolist(), topk_probs[b].tolist()):
-            print(f"{eco_classes[idx]} | {prob} \n")
+            print(f"{eco_classes[idx]:<{max_len}} | {prob}")
     
     return topk_probs, topk_idx
+
+if __name__ == "__main__":
+    fen = "rnbqkbnr/pp1ppp1p/6p1/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3"
+    inference(pos=fen, form="fen", topk=10)

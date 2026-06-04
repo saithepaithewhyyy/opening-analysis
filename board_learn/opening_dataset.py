@@ -51,5 +51,23 @@ def make_save_data(folder_path=".."):
     torch.save(dataset, folder_path + "/dataset.pt", pickle_protocol=4)
     return dataset
 
+def make_subset(dataset_path="..", size=4000):
+    dataset = torch.load(dataset_path + "/dataset.pt", weights_only=False)
+    indices = np.random.choice(len(dataset), size, replace=False)
+
+    bitboards = dataset.bitboards[indices].numpy()
+    scalars = dataset.scalars[indices].numpy()
+    targets = [dataset.targets[i] for i in indices]
+
+    subset = OpeningDataset(
+        bitboards,
+        scalars,
+        targets,
+        dataset.eco_classes
+    )
+
+    torch.save(subset, dataset_path + "/subset.pt", pickle_protocol=4)
+
 if __name__ == "__main__":
     make_save_data()
+    # make_subset(dataset_path="..")

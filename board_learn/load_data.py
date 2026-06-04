@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+import pickle
 
 
 BOARD_FORMAT = '<12QQI2BxxQ'
@@ -124,6 +125,8 @@ def load_data(folder_path='.'):
     eco_classes = sorted(roots_df['eco'].unique())
     eco_to_idx = {eco: i for i, eco in enumerate(eco_classes)}
     n_classes = len(eco_classes)
+    with open("checkpoints/eco_classes.pkl", "wb") as f:
+        pickle.dump(eco_classes, f)
 
     print("loading bitboard data...")
     bb_cols = ['board_occupied'] + [f'board_bb_{side}_{piece}' for side in range(2) for piece in range(6)]

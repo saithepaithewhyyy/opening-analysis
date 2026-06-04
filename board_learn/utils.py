@@ -30,7 +30,7 @@ def sparse_kl_loss(log_q, sparse_targets):
     return loss / len(sparse_targets)
 
 
-def pos_to_bb(pos, form='fen'):
+def pos_to_bb(pos, form="fen"):
     bbs = np.zeros(13, dtype=np.uint64)
     squares = {}
 
@@ -55,12 +55,50 @@ def pos_to_bb(pos, form='fen'):
         bbs[0] |= bit
         bbs[PIECE_INDEX[piece] + 1] |= bit
 
-    return bbs
+    bb_bytes = bbs.view(np.uint8).reshape(13, 8)
 
-def inference_features(pos, form):
+    bb = np.unpackbits(
+        bb_bytes,
+        axis=1,
+        bitorder="little"
+    ).astype(np.uint8)
+
+    return bb
+
+
+def inference_features(pos, form="fen"):
     bb = pos_to_bb(pos, form)
-    scalars = 0
     
+    if form == "fen":
+        parts = pos.split()
+
+        turn = 0
+        if parts[1] == "w":
+            turn = 1
+
+        castling = parts[2]
+        wk = int("K" in castling)
+        wq = int("Q" in castling)
+        bk = int("k" in castling)
+        bq = int("q" in castling)
+
+        ep = parts[3]
+        ep_file_oh = np.zeros(8, dtype=np.uint8)
+
+        if ep != "-":
+            file = ord(ep[0]) - ord("a")
+            ep_file_oh[file] = 1
+
+        scalars = np.concatenate([
+            np.array([
+                turn,
+                int(ep!="-"),
+                wk, wq, bk, bq
+            ]),
+            ep_file_oh
+        ])
+    else:
+        raise ValueError(f"only supports fen for now :<")
+        
     return bb, scalars
-    
     
