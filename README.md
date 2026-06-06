@@ -7,23 +7,26 @@ This project consists of two parts, the opening classifier and the board opening
 
 ### Opening Classifier
 
-The opening classifier is a fast bayesian search model exposed as a Python extension via pybind11. The indexing code runs a massive multi threaded BFS search (aided by move scorinbg heuristics and polyglot opening books) to index all positions to a given depth. 
+The opening classifier is a fast Bayesian search model exposed as a Python extension via pybind11. The indexing code runs a massive multithreaded BFS search (aided by move scoring heuristics and polyglot opening books) to index all positions to a given depth. 
 
-Given a FEN position, the bayesian classifer then returns a ranked list of ECO openings with posterior probabilities. Why is it bayesian? Well each indexed position is probabilitically scored at indexing time and on inference time, the posterior is calculated by simple bayes rule 
+Given a FEN position, the Bayesian classifier then returns a ranked list of ECO openings with posterior probabilities. Why is it Bayesian? Well, each position is probabilistically scored at indexing time, and on inference time, the posterior is calculated by the simple Bayes rule. The priors for each opening are calculated using the frequency-of=play statistics from the lichess API
 
 ```
 board.hpp / board.cpp           — Board representation, FEN parsing, Zobrist hashing
-zobrist_key.hpp                 — Official Polyglot Random64 table (781 entries)
+zobrist_key.hpp                 — Official Polyglot Random64 table hashes
 definitions.hpp                 — Platform-specific bit intrinsics (MSVC / GCC)
-movegen.hpp / movegen.cpp       — Legal move generation, move scoring, softmax normalisation
-reader.hpp                      — Polyglot .bin book reader with multi-book merge support
+movegen.hpp / movegen.cpp       — Legal move generation and scoring
+reader.hpp                      — Polyglot.bin book reader
 classifier.hpp / classifier.cpp — Bayesian BFS index builder and classifier engine
 bindings.cpp                    — pybind11 Python bindings
+
+demo.py                         — Demo of indexing and classifying
+opening_priors.py               — Fetches the priors for each opening from Lichess' API
 ```
 
 ### Board Learn
 
-A simple dual stream transformer model that learns positional and piece relationships that are central characteristic of openings. The data used to train is directly taken from `index.bin`. Following is the architecture of the transformer model used:- 
+A simple dual stream transformer model that learns positional and piece (self and cross) relationships that are central characteristics of openings. The data used to train is directly taken from `index.bin`. Following is the architecture of the transformer model used:- 
 
 ### How it works
  
