@@ -78,7 +78,7 @@ if __name__ == "__main__":
     
     import os
     book_paths = []
-    folder_path = "C:/praneeth/progs/py/opening-analysis/opening-books"
+    folder_path = "C:/praneeth/progs/py/opening-analysis/opening-books/opening_books"
 
     for fname in os.listdir(folder_path):
         if fname.endswith('.bin'):
