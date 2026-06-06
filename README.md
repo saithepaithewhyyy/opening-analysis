@@ -48,7 +48,7 @@ Works on both Windows and Mac. (I have not checked on Linux, but I'm sure it'll 
 ### Requirements:- 
 - C++ 17
 - Python 3+
-- A couple of python libraries which I will include in a requirements file 
+- A couple of python libraries included in the requirements.txt 
 
 ### Build and Run:-
 
