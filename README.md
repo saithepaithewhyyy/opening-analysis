@@ -1,15 +1,19 @@
 # Opening Analysis
-`<I need to fill this>`
+Identifying a chess opening from an arbitrary and static board position is non-trivial, unlike dynamic lines, which can be directly mapped to known openings. Several factors affect this, some such as transpositions, move-order variations, and overlapping ECO families, all of which complicate a naive lookup. This project approaches the problem in two ways: a Bayesian classifier built on a probabilistic BFS index, and a dual-stream transformer that learns the structural characteristics of openings from the same data.
+
+Why is identifying a static position important? Each opening position, regardless of where it came from, has its own heatmap; in other words, certain positional and structural characteristics that define it, as well as the game to come. Identifying such characteristics in an opening position that does not stem from popular study is crucial in understanding how to proceed.
+
+**Note:-** This is still largely in dev, there's a lot that I plan to do with this!
  
 ## Architecture
 
-This project consists of two parts, the opening classifier and the board opening positional learning model. 
+This project consists of two parts: the opening classifier and the board opening positional learning model. 
 
 ### Opening Classifier
 
 The opening classifier is a fast Bayesian search model exposed as a Python extension via pybind11. The indexing code runs a massive multithreaded BFS search (aided by move scoring heuristics and polyglot opening books) to index all positions to a given depth. 
 
-Given a FEN position, the Bayesian classifier then returns a ranked list of ECO openings with posterior probabilities. Why is it Bayesian? Well, each position is probabilistically scored at indexing time, and on inference time, the posterior is calculated by the simple Bayes rule. The priors for each opening are calculated using the frequency-of-play statistics from the lichess API
+Given a FEN position, the Bayesian classifier then returns a ranked list of ECO openings with posterior probabilities. Why is it Bayesian? Well, each position is probabilistically scored at indexing time, and on inference time, the posterior is calculated by the simple Bayes rule. The priors for each opening are calculated using the frequency-of-play statistics from the Lichess API
 
 ```
 board.hpp / board.cpp           — Board representation, FEN parsing, Zobrist hashing
