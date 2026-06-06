@@ -9,7 +9,7 @@ This project consists of two parts, the opening classifier and the board opening
 
 The opening classifier is a fast Bayesian search model exposed as a Python extension via pybind11. The indexing code runs a massive multithreaded BFS search (aided by move scoring heuristics and polyglot opening books) to index all positions to a given depth. 
 
-Given a FEN position, the Bayesian classifier then returns a ranked list of ECO openings with posterior probabilities. Why is it Bayesian? Well, each position is probabilistically scored at indexing time, and on inference time, the posterior is calculated by the simple Bayes rule. The priors for each opening are calculated using the frequency-of=play statistics from the lichess API
+Given a FEN position, the Bayesian classifier then returns a ranked list of ECO openings with posterior probabilities. Why is it Bayesian? Well, each position is probabilistically scored at indexing time, and on inference time, the posterior is calculated by the simple Bayes rule. The priors for each opening are calculated using the frequency-of-play statistics from the lichess API
 
 ```
 board.hpp / board.cpp           — Board representation, FEN parsing, Zobrist hashing
@@ -28,15 +28,18 @@ opening_priors.py               — Fetches the priors for each opening from Lic
 
 A simple dual stream transformer model that learns positional and piece (self and cross) relationships that are central characteristics of openings. The data used to train is directly taken from `index.bin`. Following is the architecture of the transformer model used:- 
 
+<img width="800" height="679" alt="image" src="https://github.com/user-attachments/assets/3a7c3f0a-a1b2-4c4f-a21a-d6ff9471bc21" />
+
+
 ### How it works
  
-`build_index` runs a BFS from each ECO root position up to `max_depth` plies, using `generate_legal_scored_moves` to compute transition probabilities. These are accumulated into a hash map keyed by Zobrist hash. At query time, `classify` looks up the position hash, and uses a bayesian methodology to return the top-N openings by posterior.
+`build_index` runs a BFS from each ECO root position up to `max_depth` plies, using `generate_legal_scored_moves` to compute transition probabilities. These are accumulated into a hash map keyed by the polyglot Zobrist hash. At query time, `classify` looks up the position hash and uses a Bayesian posterior calculation to return the top-N openings by posterior.
  
-Opening book weights (`2*wins + draws`) are blended into move scoring proportionally, so book-supported moves are favoured during BFS without overriding the heuristics entirely.
+Opening book weights (`2*wins + draws`) from the polyglot books are blended into move scoring proportionally, so book-supported moves are favoured during BFS without overriding the heuristics entirely.
 
 ## Requirements and Building
 
-Works on both Windows and Mac. (I have not checked on linux, but I'm sure it'll work)
+Works on both Windows and Mac. (I have not checked on Linux, but I'm sure it'll work)
 
 ### Requirements:- 
 - C++ 17
@@ -45,10 +48,10 @@ Works on both Windows and Mac. (I have not checked on linux, but I'm sure it'll 
 
 ### Build and Run:-
 
-It's quite simple, but here are the steps to build an run both components:-
-For your safety and sanity, consider using a venv; keeps things clean even though the code is a dumpster pile.
+It's quite simple, but here are the steps to build and run both components:-
+For your safety and sanity, consider using a venv; it keeps things clean even though the code is a dumpster pile.
 
-The opening classifier library can be built via `pip install .` in opening_classifier. `demo.py` gives a rundown on how things work. The demo file will run the indexing at a default depth of 3 plies and classifies some randomly chose opening positions. It also creates a `index.bin` file at root which can be used for further runs.
+The opening classifier library can be built via `pip install .` in opening_classifier. `demo.py` gives a rundown on how things work. The demo file will run the indexing at a default depth of 3 plies and classify some randomly chosen opening positions. It also creates an `index.bin` file at root, which can be used for further runs.
 
 For `board_learn`, the `train.py` file takes care of data loading (from the `index.bin` file) as well as the training. `inference.py` runs the model against a random opening position for a sanity check.
 
