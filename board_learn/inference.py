@@ -5,7 +5,10 @@ import pickle
 
 import opening_model as om
 
-def inference(pos, form="fen", topk=5, checkpoint_dir="checkpoints"):
+CHECKPOINTS_DIR = "checkpoints"
+FINAL_MODEL_PATH = "final_model.pt"
+
+def inference(pos, form="fen", topk=5, checkpoint_dir=CHECKPOINTS_DIR):
     device = torch.device('cuda' if torch.cuda.is_available()
                         else 'mps' if torch.backends.mps.is_available()
                         else 'cpu')
@@ -14,7 +17,7 @@ def inference(pos, form="fen", topk=5, checkpoint_dir="checkpoints"):
         eco_classes = pickle.load(f)
 
     model = om.OpeningModel(n_classes=len(eco_classes)).to(device)
-    ckpt = torch.load(os.path.join(checkpoint_dir, "final_model.pt"))
+    ckpt = torch.load(os.path.join(checkpoint_dir, FINAL_MODEL_PATH))
     model = torch.compile(model)
     model.load_state_dict(ckpt["model_state_dict"])
     bb, sc = utils.inference_features(pos, form)

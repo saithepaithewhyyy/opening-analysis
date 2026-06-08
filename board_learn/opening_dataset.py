@@ -6,15 +6,16 @@ from torch.utils.data import Dataset
 
 import load_data as ld
 
+DATASET_FILE = "dataset.pt"
+
 class OpeningDataset(Dataset):
     def __init__(self, bitboards_all, scalars_all, targets_all, eco_classes):
         # bitboards -> (n, 13, 64)
-        # scalars -> (n, 7 or 8 idk i might change it)
-        # targets -> (n, n_classes)
+        # scalars -> (n, 14)
+        # targets -> (n, tuple) -> each tuple has the sparse classes
         self.bitboards = torch.from_numpy(bitboards_all)
         self.scalars = torch.from_numpy(scalars_all)
         self.targets = targets_all
-        self.targets_all = targets_all
         self.eco_classes = eco_classes
 
     def __len__(self):
@@ -24,7 +25,6 @@ class OpeningDataset(Dataset):
         return self.bitboards[idx].float(), self.scalars[idx].float(), self.targets[idx]
     
 def opening_collate(batch):
-
     bb, sc, targets = zip(*batch)
     return (
         torch.stack(bb),
@@ -33,12 +33,12 @@ def opening_collate(batch):
     )
     
     
-def make_save_data(folder_path=".."):
-    if "dataset.pt" in os.listdir(folder_path):
-        dataset = torch.load(folder_path + "/dataset.pt", weights_only=False)
+def make_save_data(folder_path="../"):
+    if DATASET_FILE in os.listdir(folder_path):
+        dataset = torch.load(folder_path + DATASET_FILE, weights_only=False)
         return dataset
     
-    _, bb, sc, targets, eco_classes = ld.load_data("../parquet")
+    _, bb, sc, targets, eco_classes = ld.load_data(ld.PARQUET_PATH)
     valid = np.array([
         len(idxs) > 0
         for idxs, probs in targets
@@ -48,25 +48,8 @@ def make_save_data(folder_path=".."):
     targets = [ targets[i] for i in np.where(valid)[0]]
 
     dataset = OpeningDataset(bb, sc, targets, eco_classes)
-    torch.save(dataset, folder_path + "/dataset.pt", pickle_protocol=4)
+    torch.save(dataset, folder_path + DATASET_FILE, pickle_protocol=4)
     return dataset
-
-def make_subset(dataset_path="..", size=4000):
-    dataset = torch.load(dataset_path + "/dataset.pt", weights_only=False)
-    indices = np.random.choice(len(dataset), size, replace=False)
-
-    bitboards = dataset.bitboards[indices].numpy()
-    scalars = dataset.scalars[indices].numpy()
-    targets = [dataset.targets[i] for i in indices]
-
-    subset = OpeningDataset(
-        bitboards,
-        scalars,
-        targets,
-        dataset.eco_classes
-    )
-
-    torch.save(subset, dataset_path + "/subset.pt", pickle_protocol=4)
 
 if __name__ == "__main__":
     make_save_data()

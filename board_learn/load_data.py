@@ -10,7 +10,7 @@ import pickle
 
 BOARD_FORMAT = '<12QQI2BxxQ'
 BOARD_SIZE = struct.calcsize(BOARD_FORMAT)
-FOLDER_PATH = "../parquet"
+PARQUET_PATH = "../parquet"
 INDEX_PATH = "../index.bin"
 
 def parse_board(raw):
@@ -194,4 +194,4 @@ def load_data(folder_path='.'):
     return zobrists, bitboards_all, scalars_all, targets_all, eco_classes
 
 if __name__ == "__main__":
-    zobrists, bitboards_all, scalars_all, targets_all, eco_classes = load_data(folder_path=FOLDER_PATH)
+    zobrists, bitboards_all, scalars_all, targets_all, eco_classes = load_data(folder_path=PARQUET_PATH)

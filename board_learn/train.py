@@ -18,7 +18,7 @@ def train():
     dataset = od.make_save_data()
     labels = np.array([
         idxs[np.argmax(probs)]
-        for idxs, probs in dataset.targets_all
+        for idxs, probs in dataset.targets
     ])
     counts = np.bincount(labels)
     valid_mask = counts[labels] >= 2
@@ -51,24 +51,19 @@ def train():
     checkpoint_dir = "checkpoints"
     os.makedirs(checkpoint_dir, exist_ok=True)
     
-    # criterion = nn.KLDivLoss(reduction='batchmean')
     criterion = sparse_kl_loss
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
-    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
     
     best_val = float('inf')
     total_loss = 0.0
     print(f"Training Starting on {device}...")
-    # for epoch in tqdm(range(num_epochs)):
     for i, data in enumerate(tqdm(train_loader)):
         model.train()
         
         bb, sc, target = data
-        # for bb, sc, target in train_loader:
         bb = bb.to(device)
         sc = sc.to(device)
-        # target = target.to(device)
-        
         
         optimizer.zero_grad()
                     
@@ -84,7 +79,7 @@ def train():
         
         optimizer.step()
         total_loss += loss.item()   
-        # scheduler.step()
+        scheduler.step()
         
         # model.eval()
         # val_loss = 0
@@ -118,11 +113,8 @@ def train():
         #     torch.save(checkpoint, ckpt_path)
 
         tqdm.write(f"Step {i+1:02d} | train_loss={total_loss/(i+1):.4f} | "
-            #   f"val_loss={val_loss/len(test_loader):.4f} | "
               f"gradient norm unclipped={grad_norm_unclipped:.4f} | "
-              f"entropy_mean={entropy.mean().item():.4f} | "
-              f"entropy_min={entropy.min().item():.4f} | "
-              f"entropy_max={entropy.max().item():.4f}")
+              f"entropy_mean={entropy.mean().item():.4f}")
             
     torch.save(checkpoint, os.path.join(checkpoint_dir, "final_model.pt"))
 
