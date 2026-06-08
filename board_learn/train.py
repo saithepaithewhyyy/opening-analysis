@@ -14,6 +14,12 @@ from opening_dataset import OpeningDataset, opening_collate
 from utils import sparse_kl_loss
 
 CHECKPOINTS_DIR = "checkpoints"
+TEST_SIZE = 0.1
+BATCH_SIZE = 256
+NUM_WORKERS = 4
+LR = 1e-3
+WEIGHT_DECAY = 1e-2
+CKPT_COUNT = 10
     
 def train():
 
@@ -28,7 +34,7 @@ def train():
 
     train_indices, test_indices = train_test_split(
         valid_indices,
-        test_size=0.2,
+        test_size=TEST_SIZE,
         stratify=labels[valid_indices],
         random_state=42
     )
@@ -40,21 +46,21 @@ def train():
                           else 'mps' if torch.backends.mps.is_available() # for metal gpus (apple)
                           else 'cpu') # you dont have anything :(
     
-    train_loader = DataLoader(train_data, batch_size=256, shuffle=True, num_workers=4, pin_memory=True, collate_fn=opening_collate)
-    test_loader = DataLoader(test_data, batch_size=256, shuffle=True, num_workers=4, pin_memory=True, collate_fn=opening_collate)
+    train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True, collate_fn=opening_collate)
+    test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True, collate_fn=opening_collate)
    
     eco_classes = dataset.eco_classes
 
     model = om.OpeningModel(n_classes=len(eco_classes)).to(device)
     model = torch.compile(model)
     
-    num_bacthes = len(train_loader)
-    print(f"number of batches: {num_bacthes}")
+    num_batches = len(train_loader)
+    print(f"number of batches: {num_batches}")
     os.makedirs(CHECKPOINTS_DIR, exist_ok=True)
     
     criterion = sparse_kl_loss
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_bacthes)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_batches)
     
     best_val = float('inf')
     total_loss = 0.0
@@ -82,36 +88,37 @@ def train():
         total_loss += loss.item()   
         scheduler.step()
         
-        # model.eval()
-        # val_loss = 0
-        # with torch.no_grad():
-        #     for bb_test, sc_test, target_test in test_loader:
-        #         bb_test = bb_test.to(device)
-        #         sc_test = sc_test.to(device)
-        #         # target_test = target_test.to(device)
-        #         out_test = model(bb_test, sc_test)
-        #         val_loss += criterion(out_test, target_test).item()
-                
-        avg_train = total_loss / (i+1)
-        # avg_val = val_loss / len(test_loader)
-                
-        checkpoint = {
-            'epoch': i + 1,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            # 'scheduler_state_dict': scheduler.state_dict(),
-            'train_loss': avg_train,
-            # 'val_loss': avg_val,
-            'eco_classes': eco_classes,
-        }
-        
-        # ckpt_path = os.path.join(checkpoint_dir, f"checkpoint_epoch{epoch+1:02d}.pt")
-        # torch.save(checkpoint, ckpt_path)
-        
-        # if avg_val < best_val:
-        #     best_val = avg_val
-        #     ckpt_path = os.path.join(checkpoint_dir, "best_model.pt")
-        #     torch.save(checkpoint, ckpt_path)
+        ckpt_iter = len(train_loader) / CKPT_COUNT
+        if i%ckpt_iter == 0:
+            model.eval()
+            val_loss = 0
+            with torch.no_grad():
+                for bb_test, sc_test, target_test in test_loader:
+                    bb_test = bb_test.to(device)
+                    sc_test = sc_test.to(device)
+                    out_test = model(bb_test, sc_test)
+                    val_loss += criterion(out_test, target_test).item()
+                    
+            avg_train = total_loss / (i+1)
+            avg_val = val_loss / len(test_loader)
+                    
+            checkpoint = {
+                'epoch': i+1,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict(),
+                'train_loss': avg_train,
+                'val_loss': avg_val,
+                'eco_classes': eco_classes,
+            }
+            
+            ckpt_path = os.path.join(CHECKPOINTS_DIR, f"checkpoint_epoch{i+1:02d}.pt")
+            torch.save(checkpoint, ckpt_path)
+            
+            if avg_val < best_val:
+                best_val = avg_val
+                ckpt_path = os.path.join(CHECKPOINTS_DIR, "final_model.pt")
+                torch.save(checkpoint, ckpt_path)
 
         tqdm.write(f"Step {i+1:02d} | train_loss={total_loss/(i+1):.4f} | "
               f"gradient norm unclipped={grad_norm_unclipped:.4f} | "
@@ -121,20 +128,21 @@ def train():
     model.eval()
     val_loss = 0
     with torch.no_grad():
-        print("Validating over test set")
+        print("Final validation over test set")
         for i, data in enumerate(tqdm(test_loader)):
             bb_test, sc_test, target_test = data
             bb_test = bb_test.to(device)
             sc_test = sc_test.to(device)
-            # target_test = target_test.to(device)
             out_test = model(bb_test, sc_test)
             val_loss += criterion(out_test, target_test).item()
             
     avg_train = total_loss / (i+1)
-    # avg_val = val_loss / len(test_loader)
-    print(f"val_loss={val_loss/len(test_loader):.4f}")
+    avg_val = val_loss / len(test_loader)
+    print(f"val_loss={avg_val:.4f}")
     
-    torch.save(checkpoint, os.path.join(CHECKPOINTS_DIR, "final_model.pt"))
+    if avg_val < best_val:
+        torch.save(checkpoint, os.path.join(CHECKPOINTS_DIR, "final_model.pt"))
+        
     return
     
 if __name__ == "__main__":
