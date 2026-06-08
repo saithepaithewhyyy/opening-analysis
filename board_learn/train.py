@@ -76,7 +76,7 @@ def train():
                     
         out = model(bb, sc)
         loss = criterion(out, target)
-        loss.backward()
+        loss.backward() # type: ignore
         lp = out
         probs = lp.exp()
         entropy = -(probs * lp).sum(dim=1)
@@ -85,7 +85,7 @@ def train():
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         
         optimizer.step()
-        total_loss += loss.item()   
+        total_loss += loss.item()  # type: ignore 
         scheduler.step()
         
         ckpt_iter = len(train_loader) / CKPT_COUNT
@@ -97,7 +97,7 @@ def train():
                     bb_test = bb_test.to(device)
                     sc_test = sc_test.to(device)
                     out_test = model(bb_test, sc_test)
-                    val_loss += criterion(out_test, target_test).item()
+                    val_loss += criterion(out_test, target_test).item() # type: ignore
                     
             avg_train = total_loss / (i+1)
             avg_val = val_loss / len(test_loader)
@@ -134,7 +134,7 @@ def train():
             bb_test = bb_test.to(device)
             sc_test = sc_test.to(device)
             out_test = model(bb_test, sc_test)
-            val_loss += criterion(out_test, target_test).item()
+            val_loss += criterion(out_test, target_test).item() # type: ignore
             
     avg_train = total_loss / (i+1)
     avg_val = val_loss / len(test_loader)
