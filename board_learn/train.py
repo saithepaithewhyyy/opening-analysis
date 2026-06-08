@@ -88,7 +88,8 @@ def train():
         total_loss += loss.item()  # type: ignore 
         scheduler.step()
         
-        ckpt_iter = len(train_loader) / CKPT_COUNT
+        ckpt_iter = max(1, len(train_loader) // CKPT_COUNT)
+        avg_val = None
         if i%ckpt_iter == 0:
             model.eval()
             val_loss = 0
@@ -120,9 +121,10 @@ def train():
                 ckpt_path = os.path.join(CHECKPOINTS_DIR, "final_model.pt")
                 torch.save(checkpoint, ckpt_path)
 
+        val_info = f" | val_loss={avg_val:.4f}" if avg_val is not None else ""
         tqdm.write(f"Step {i+1:02d} | train_loss={total_loss/(i+1):.4f} | "
               f"gradient norm unclipped={grad_norm_unclipped:.4f} | "
-              f"entropy_mean={entropy.mean().item():.4f}")
+              f"entropy_mean={entropy.mean().item():.4f}{val_info}")
             
 
     model.eval()
@@ -136,11 +138,20 @@ def train():
             out_test = model(bb_test, sc_test)
             val_loss += criterion(out_test, target_test).item() # type: ignore
             
-    avg_train = total_loss / (i+1)
+    avg_train = total_loss / len(train_loader)
     avg_val = val_loss / len(test_loader)
     print(f"val_loss={avg_val:.4f}")
     
     if avg_val < best_val:
+        checkpoint = {
+            'epoch': len(train_loader)+1,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler.state_dict(),
+            'train_loss': avg_train,
+            'val_loss': avg_val,
+            'eco_classes': eco_classes,
+        }
         torch.save(checkpoint, os.path.join(CHECKPOINTS_DIR, "final_model.pt"))
         
     return
