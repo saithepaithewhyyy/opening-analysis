@@ -12,6 +12,8 @@ import opening_model as om
 import opening_dataset as od
 from opening_dataset import OpeningDataset, opening_collate
 from utils import sparse_kl_loss
+
+CHECKPOINTS_DIR = "checkpoints"
     
 def train():
 
@@ -46,14 +48,13 @@ def train():
     model = om.OpeningModel(n_classes=len(eco_classes)).to(device)
     model = torch.compile(model)
     
-    num_epochs = len(train_loader)
-    print(f"number of epochs: {num_epochs}")
-    checkpoint_dir = "checkpoints"
-    os.makedirs(checkpoint_dir, exist_ok=True)
+    num_bacthes = len(train_loader)
+    print(f"number of batches: {num_bacthes}")
+    os.makedirs(CHECKPOINTS_DIR, exist_ok=True)
     
     criterion = sparse_kl_loss
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_bacthes)
     
     best_val = float('inf')
     total_loss = 0.0
@@ -116,12 +117,13 @@ def train():
               f"gradient norm unclipped={grad_norm_unclipped:.4f} | "
               f"entropy_mean={entropy.mean().item():.4f}")
             
-    torch.save(checkpoint, os.path.join(checkpoint_dir, "final_model.pt"))
 
     model.eval()
     val_loss = 0
     with torch.no_grad():
-        for bb_test, sc_test, target_test in test_loader:
+        print("Validating over test set")
+        for i, data in enumerate(tqdm(test_loader)):
+            bb_test, sc_test, target_test = data
             bb_test = bb_test.to(device)
             sc_test = sc_test.to(device)
             # target_test = target_test.to(device)
@@ -131,6 +133,8 @@ def train():
     avg_train = total_loss / (i+1)
     # avg_val = val_loss / len(test_loader)
     print(f"val_loss={val_loss/len(test_loader):.4f}")
+    
+    torch.save(checkpoint, os.path.join(CHECKPOINTS_DIR, "final_model.pt"))
     return
     
 if __name__ == "__main__":
