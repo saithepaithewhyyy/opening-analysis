@@ -18,11 +18,11 @@ class OpeningModel(nn.Module):
                 n_bb = 13,
                 n_sq = 64,
                 n_flat = 14,
-                d_model = 128,
+                d_model = 96,
                 nhead = 4,
-                num_layers = 3,
+                num_layers = 2,
                 d_ff = 512,
-                d_hidden = 1024,
+                d_hidden = 512,
                 dropout = 0.1):
         
         super().__init__()
