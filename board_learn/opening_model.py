@@ -70,27 +70,83 @@ class OpeningModel(nn.Module):
     def forward(self, bitboards, meta):
         # bitboards shape - (b, 13, 64)
         # meta shape - (b, n_flat)
-        
+
         meta = self.scalar(meta)
 
         sq = bitboards[:, 1:, :].permute(0, 2, 1)
         sq = self.sq_linear(sq)
         sq += self.rank_file_encode(device=sq.device)
         sq = self.sq_transformer(sq)
-        
+
         bb = bitboards[:, :, :]
         bb = self.bb_linear(bb)
         bb += self.bb_embed(torch.arange(self.n_bb, device=bb.device))
         bb = self.bb_transformer(bb)
-        
+
         sq = self.norm_sq(sq + self.cross_attn_sq(query=sq, key=bb, value=bb)[0])
         bb = self.norm_bb(bb + self.cross_attn_bb(query=bb, key=sq, value=sq)[0])
-        
+
         sq_out = sq.mean(dim=1)
         bb_out = bb.mean(dim=1)
-        
+
         op = torch.cat([sq_out, bb_out, meta], dim=-1)
         op = self.ff(op)
-        
+
         return torch.log_softmax(op, dim=-1)
-        
+
+    def forward_with_attn_maps(self, bitboards, meta):
+        attn_maps = {}
+
+        meta_out = self.scalar(meta)
+
+        sq = bitboards[:, 1:, :].permute(0, 2, 1)
+        sq = self.sq_linear(sq)
+        sq += self.rank_file_encode(device=sq.device)
+
+        bb = bitboards[:, :, :]
+        bb = self.bb_linear(bb)
+        bb += self.bb_embed(torch.arange(self.n_bb, device=bb.device))
+
+        for i, layer in enumerate(self.sq_transformer.layers):
+            normed = layer.norm1(sq)
+            attn_out, attn_w = layer.self_attn(
+                normed, normed, normed,
+                need_weights=True, average_attn_weights=False
+            )
+            attn_maps[f'sq_layer{i}'] = attn_w.detach()
+            sq = sq + layer.dropout1(attn_out)
+            sq = sq + layer.dropout2(layer.linear2(layer.dropout(layer.activation(layer.linear1(layer.norm2(sq))))))
+
+
+        for i, layer in enumerate(self.bb_transformer.layers):
+            normed = layer.norm1(bb)
+            attn_out, attn_w = layer.self_attn(
+                normed, normed, normed,
+                need_weights=True, average_attn_weights=False
+            )
+
+            attn_maps[f'bb_layer{i}'] = attn_w.detach()
+            bb = bb + layer.dropout1(attn_out)
+            bb = bb + layer.dropout2(layer.linear2(layer.dropout(layer.activation(layer.linear1(layer.norm2(bb))))))
+
+        cross_out_sq, cross_w_sq = self.cross_attn_sq(
+            query=sq, key=bb, value=bb,
+            need_weights=True, average_attn_weights=False
+        )
+        attn_maps['cross_sq'] = cross_w_sq.detach()
+        sq = self.norm_sq(sq + cross_out_sq)
+
+        cross_out_bb, cross_w_bb = self.cross_attn_bb(
+            query=bb, key=sq, value=sq,
+            need_weights=True, average_attn_weights=False
+        )
+        attn_maps['cross_bb'] = cross_w_bb.detach()
+        bb = self.norm_bb(bb + cross_out_bb)
+
+        sq_out = sq.mean(dim=1)
+        bb_out = bb.mean(dim=1)
+
+        op = torch.cat([sq_out, bb_out, meta_out], dim=-1)
+        op = self.ff(op)
+
+        return torch.log_softmax(op, dim=-1), attn_maps
