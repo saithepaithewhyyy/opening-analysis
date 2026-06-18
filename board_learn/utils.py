@@ -101,4 +101,6 @@ def inference_features(pos, form="fen"):
         raise ValueError(f"only supports fen for now :<")
         
     return bb, scalars
-    
+
+def plot_grads(piece_grad):
+        return
