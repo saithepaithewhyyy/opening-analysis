@@ -84,40 +84,6 @@ def train():
         optimizer.step()
         total_loss += loss.item()  # type: ignore 
         
-        # ckpt_iter = max(1, len(train_loader) // CKPT_COUNT)
-        # avg_val = None
-        # if i%ckpt_iter == 0:
-        #     model.eval()
-        #     val_loss = 0
-        #     with torch.no_grad():
-        #         for bb_test, sc_test, target_test in test_loader:
-        #             bb_test = bb_test.to(device)
-        #             sc_test = sc_test.to(device)
-        #             out_test = model(bb_test, sc_test)
-        #             val_loss += criterion(out_test, target_test).item() # type: ignore
-                    
-        #     avg_train = total_loss / (i+1)
-        #     avg_val = val_loss / len(test_loader)
-                    
-        #     checkpoint = {
-        #         'epoch': i+1,
-        #         'model_state_dict': model.state_dict(),
-        #         'optimizer_state_dict': optimizer.state_dict(),
-        #         'scheduler_state_dict': scheduler.state_dict(),
-        #         'train_loss': avg_train,
-        #         'val_loss': avg_val,
-        #         'eco_classes': eco_classes,
-        #     }
-            
-        #     ckpt_path = os.path.join(CHECKPOINTS_DIR, f"checkpoint_epoch{i+1:02d}.pt")
-        #     torch.save(checkpoint, ckpt_path)
-            
-        #     if avg_val < best_val:
-        #         best_val = avg_val
-        #         ckpt_path = os.path.join(CHECKPOINTS_DIR, "final_model.pt")
-        #         torch.save(checkpoint, ckpt_path)
-
-        # val_info = f" | val_loss={avg_val:.4f}" if avg_val is not None else ""
         tqdm.write(f"Step {i+1:02d} | train_loss={total_loss/(i+1):.4f} | ")
             
 
