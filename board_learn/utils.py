@@ -9,6 +9,11 @@ PIECE_INDEX = {
     'p': 6, 'n': 7, 'b': 8, 'r': 9, 'q': 10, 'k': 11,
 }
 
+PIECE_LABELS = {
+    'occ': 'Overall', 'P': 'White Pawn', 'N': 'White Knight', 'B': 'White Bishop', 'R': 'White Rook', 'Q': 'White Queen', 'K': 'White King', 'p': 'Black Pawn',
+    'n': 'Black Knight', 'b': 'Black Bishop', 'r': 'Black Rook', 'q': 'Black Queen', 'k': 'Black King', 'mean': 'Average',
+}
+
 def sparse_kl_loss(log_q, sparse_targets):
     loss = 0.0
     for b, (idxs, probs) in enumerate(sparse_targets):
@@ -100,8 +105,22 @@ def inference_features(pos, form="fen"):
         ])
     else:
         raise ValueError(f"only supports fen for now :<")
-        
+
     return bb, scalars
 
-def plot_grads(piece_grad):
-        return
+
+def plot_grads(piece_grad, title=''):
+    board = piece_grad.reshape(8, 8)[::-1]
+    vmax = np.abs(piece_grad).max() or 1.0
+    label = PIECE_LABELS.get(title, title)
+
+    fig, ax = plt.subplots(figsize=(4, 4))
+    fig.suptitle(label, fontsize=10, fontweight='bold')
+    fig.canvas.manager.set_window_title(label)
+    im = ax.imshow(board, cmap='RdBu', vmin=-vmax, vmax=vmax)
+    ax.set_xticks(range(8)); ax.set_xticklabels(list('abcdefgh'), fontsize=7)
+    ax.set_yticks(range(8)); ax.set_yticklabels(list('87654321'), fontsize=7)
+    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    plt.tight_layout()
+
+    return fig
