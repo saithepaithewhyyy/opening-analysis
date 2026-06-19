@@ -23,11 +23,12 @@ def inference(pos, form="fen", topk=5, visual_flag=True, checkpoint_dir=CHECKPOI
     model.load_state_dict(ckpt["model_state_dict"])
     bb, sc = utils.inference_features(pos, form)
 
-    bb = torch.as_tensor(bb, dtype=torch.float32, device=device).unsqueeze(0).requires_grad_(True)
+    bb = torch.as_tensor(bb, dtype=torch.float32, device=device).unsqueeze(0)
     sc = torch.as_tensor(sc, dtype=torch.float32, device=device).unsqueeze(0)
     attn_maps = {}
     
     if visual_flag:
+        bb = bb.requires_grad_(True)
         out, attn_maps = model.forward_with_attn_maps(bb, sc)
     else:
         with torch.no_grad():
@@ -45,7 +46,7 @@ def inference(pos, form="fen", topk=5, visual_flag=True, checkpoint_dir=CHECKPOI
             print(f"{eco_classes[idx]:<{max_len}} | {prob}")
 
     if visual_flag:
-        viz.visualize(attn_maps, bb.grad[0])
+        viz.visualize(attn_maps, bb.grad)
     
     return topk_probs, topk_idx
 
