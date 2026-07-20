@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
-import inference as inf
-import utils
+from . import inference
+from . import utils
 
 def visualize(attn_maps, bb_grad):
     bb_grad = bb_grad[0]
@@ -19,4 +19,4 @@ def visualize(attn_maps, bb_grad):
 
 if __name__ == "__main__":
     fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    inf.inference(pos=fen, form="fen", topk=10, visual_flag=True)
+    inference.inference(pos=fen, form="fen", topk=10, visual_flag=True, verbose=True)

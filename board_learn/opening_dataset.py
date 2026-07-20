@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 
-import load_data as ld
+from . import load_data as ld
 
 DATASET_FILE = "dataset.pt"
 
@@ -32,7 +32,6 @@ def opening_collate(batch):
         targets
     )
     
-    
 def make_save_data(folder_path="../"):
     if DATASET_FILE in os.listdir(folder_path):
         dataset = torch.load(folder_path + DATASET_FILE, weights_only=False)
@@ -53,4 +52,3 @@ def make_save_data(folder_path="../"):
 
 if __name__ == "__main__":
     make_save_data()
-    # make_subset(dataset_path="..")

@@ -14,6 +14,29 @@ PIECE_LABELS = {
     'n': 'Black Knight', 'b': 'Black Bishop', 'r': 'Black Rook', 'q': 'Black Queen', 'k': 'Black King', 'mean': 'Average',
 }
 
+# move this within chess_classifier::clasify?
+def classify(engine, fen: str, top_n: int = 3, verbose: bool = True) -> list[tuple[str, str, float, float, int]]:
+    results = engine.classify(fen, top_n=top_n)
+    prob = 1.0
+    EPS = 1e-4
+    filtered = []
+
+    for r in results:
+        if prob > EPS:
+            filtered.append(r)
+            prob -= r.posterior
+        else:
+            break
+
+    if verbose: 
+        for r in filtered:
+            print(f"{r.eco:4s}  {r.name:45s}  "
+                f"post={r.posterior:.4f}  "
+                f"probability={r.probability:.4f} "
+                f"path={r.path_length} ")
+
+    return filtered
+
 def sparse_kl_loss(log_q, sparse_targets):
     loss = 0.0
     for b, (idxs, probs) in enumerate(sparse_targets):

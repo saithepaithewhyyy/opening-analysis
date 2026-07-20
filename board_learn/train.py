@@ -7,13 +7,13 @@ from torch.utils.data import Dataset, Subset, DataLoader
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-import load_data as ld
-import opening_model as om
-import opening_dataset as od
-from opening_dataset import OpeningDataset, opening_collate
-from utils import sparse_kl_loss
+from . import load_data as ld
+from . import opening_model as om
+from . import opening_dataset as od
+from .opening_dataset import OpeningDataset, opening_collate
+from .utils import sparse_kl_loss
 
-CHECKPOINTS_DIR = "checkpoints"
+CHECKPOINTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "checkpoints")
 TEST_SIZE = 0.1
 BATCH_SIZE = 512
 NUM_WORKERS = 2
@@ -53,8 +53,8 @@ def train():
     eco_classes = dataset.eco_classes
 
     model = om.OpeningModel(n_classes=len(eco_classes)).to(device)
-    model = torch.compile(model)
-    
+    # model = torch.compile(model)
+
     num_batches = len(train_loader)
     print(f"number of batches: {num_batches}")
     os.makedirs(CHECKPOINTS_DIR, exist_ok=True)
@@ -84,6 +84,40 @@ def train():
         optimizer.step()
         total_loss += loss.item()  # type: ignore 
         
+        # ckpt_iter = max(1, len(train_loader) // CKPT_COUNT)
+        # avg_val = None
+        # if i%ckpt_iter == 0:
+        #     model.eval()
+        #     val_loss = 0
+        #     with torch.no_grad():
+        #         for bb_test, sc_test, target_test in test_loader:
+        #             bb_test = bb_test.to(device)
+        #             sc_test = sc_test.to(device)
+        #             out_test = model(bb_test, sc_test)
+        #             val_loss += criterion(out_test, target_test).item() # type: ignore
+                    
+        #     avg_train = total_loss / (i+1)
+        #     avg_val = val_loss / len(test_loader)
+                    
+        #     checkpoint = {
+        #         'epoch': i+1,
+        #         'model_state_dict': model.state_dict(),
+        #         'optimizer_state_dict': optimizer.state_dict(),
+        #         'scheduler_state_dict': scheduler.state_dict(),
+        #         'train_loss': avg_train,
+        #         'val_loss': avg_val,
+        #         'eco_classes': eco_classes,
+        #     }
+            
+        #     ckpt_path = os.path.join(CHECKPOINTS_DIR, f"checkpoint_epoch{i+1:02d}.pt")
+        #     torch.save(checkpoint, ckpt_path)
+            
+        #     if avg_val < best_val:
+        #         best_val = avg_val
+        #         ckpt_path = os.path.join(CHECKPOINTS_DIR, "final_model.pt")
+        #         torch.save(checkpoint, ckpt_path)
+
+        # val_info = f" | val_loss={avg_val:.4f}" if avg_val is not None else ""
         tqdm.write(f"Step {i+1:02d} | train_loss={total_loss/(i+1):.4f} | ")
             
 
