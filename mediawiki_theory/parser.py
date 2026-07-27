@@ -1,6 +1,10 @@
+from tabnanny import verbose
+
+
 from board_learn.inference import inference
 from board_learn.train import CHECKPOINTS_DIR
 import board_learn.utils as utils
+import board_learn.visualisation as viz
 import chess
 import chess_classifier as cc
 import json
@@ -48,19 +52,20 @@ def board_from_page(title: str):
 
     return board
 
-def get_data(fen: str =""):
+def get_data(engine, fen: str =""):
     if fen == "":
         print("fen string missing, need fen!")
         return ""
     
-    bayesian_result = utils.classify(fen=fen, engine=engine)
-    topk_probs, topk_idx,_ = inference(pos=fen, form="fen", topk=3, visual_flag=False, verbose=True)
-    
+    bayesian_result = utils.classify(fen=fen, engine=engine, verbose=False)
+    topk_probs, topk_idx, grad_data = inference(pos=fen, form="fen", topk=3, visual_flag=True, verbose=False)
+#    topk_probs, topk_idx, grad_data = [], [], []
+ 
     with open(os.path.join(CHECKPOINTS_DIR, "eco_classes.pkl"), "rb") as f:
         eco_classes = pickle.load(f)
     
     topk_classes =[[eco_classes[idx] for idx in indices.tolist()] for indices in topk_idx]  
-    return bayesian_result, topk_probs, topk_classes 
+    return bayesian_result, topk_probs, topk_classes, grad_data 
 
 def parse_theory(wikitext: str) -> str:
     code = mw.parse(wikitext)

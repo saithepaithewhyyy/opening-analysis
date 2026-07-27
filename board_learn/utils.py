@@ -131,19 +131,11 @@ def inference_features(pos, form="fen"):
 
     return bb, scalars
 
-
-def plot_grads(piece_grad, title=''):
+def get_grad_values(piece_grad, title=''):
     board = piece_grad.reshape(8, 8)[::-1]
-    vmax = np.abs(piece_grad).max() or 1.0
-    label = PIECE_LABELS.get(title, title)
+    board = np.round(board, 4)
 
-    fig, ax = plt.subplots(figsize=(4, 4))
-    fig.suptitle(label, fontsize=10, fontweight='bold')
-    fig.canvas.manager.set_window_title(label)
-    im = ax.imshow(board, cmap='RdBu', vmin=-vmax, vmax=vmax)
-    ax.set_xticks(range(8)); ax.set_xticklabels(list('abcdefgh'), fontsize=7)
-    ax.set_yticks(range(8)); ax.set_yticklabels(list('87654321'), fontsize=7)
-    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    plt.tight_layout()
-
-    return fig
+    return {
+        "piece": PIECE_LABELS.get(title, title),
+        "raw": board.tolist()
+    }

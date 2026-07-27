@@ -64,13 +64,7 @@ class WikibooksCrawler:
 
             fen = board.fen()
 
-            bayesian_result = utils.classify(fen=fen, engine=self.engine, verbose=False)
-            #topk_probs, topk_idx,_ = inference.inference(pos=fen, form="fen", topk=3, visual_flag=False, verbose=True)
-            
-            #with open(os.path.join(CHECKPOINTS_DIR, "eco_classes.pkl"), "rb") as f:
-             #   eco_classes = pickle.load(f)
-            
-            # topk_classes =[[eco_classes[idx] for idx in indices.tolist()] for indices in topk_idx]  
+            bayesian_result, topk_probs, topk_classes, grad_data = parser.get_data(fen=fen, engine=self.engine)
      
             entry = self.theory_db.setdefault(
                 cc.fen_to_hash(fen),
@@ -85,7 +79,7 @@ class WikibooksCrawler:
                     }
                         for r in bayesian_result
                     ],
-             #       "nn_result": dict(zip(topk_classes, topk_probs)),
+                    "grad_data": grad_data, 
                     "entries": [],
                 },
             )
