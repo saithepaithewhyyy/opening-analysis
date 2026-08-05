@@ -1,7 +1,8 @@
 import chess
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional
-import piece_analysis.helpers as hp
+from . import helpers as hp
+from . import pawn_structures as ps
 
 def analyze_classical_structure(board: chess.Board, color: bool) -> Dict:
     pawns = list(board.pieces(chess.PAWN, color))
@@ -60,66 +61,6 @@ def analyze_classical_structure(board: chess.Board, color: bool) -> Dict:
         if not file_map.get(1) and not file_map.get(4):
             hanging = len(c_pawns) + len(d_pawns)
 
-    # PASSED PAWNS
-    passed = []
-    for p in pawns:
-        pf = chess.square_file(p)
-        pr = chess.square_rank(p)
-        is_passed = True
-        for ep in enemy_pawns:
-            ef = chess.square_file(ep)
-            er = chess.square_rank(ep)
-            if abs(ef - pf) <= 1:
-                if color == chess.WHITE and er > pr:
-                    is_passed = False; break
-                if color == chess.BLACK and er < pr:
-                    is_passed = False; break
-        if is_passed:
-            passed.append(p)
-
-    # PASSED PAWN IS PROTECTED? (CHECK THIS AS WELL NEED TO REWRITE LOGIC)
-    protected_passed = [
-        p for p in passed
-        if any(p in hp.pawn_attacks(q, color) for q in pawns if q != p)
-    ]
-
-    # Connected passed
-    connected_passed = [
-        p for p in passed
-        if any(
-            abs(chess.square_file(q) - chess.square_file(p)) == 1
-            for q in passed if q != p
-        )
-    ]
-
-    # OUTSIDE PASSED PAWN
-    outside_passed = [p for p in passed if chess.square_file(p) <= 1 or chess.square_file(p) >= 6]
-
-    # PASSED PAWN CANDIDATES
-    candidate_passed = []
-    for p in pawns:
-        if p in passed:
-            continue
-        pf = chess.square_file(p)
-        span = hp.front_span(p, color)
-        file_clear = not any(
-            chess.square_file(ep) == pf and ep in span
-            for ep in enemy_pawns
-        )
-        if file_clear:
-            candidate_passed.append(p)
-
-    # BLOCKADED PASSED PAWNS
-    blockaded = []
-    for p in passed:
-        pf = chess.square_file(p)
-        pr = chess.square_rank(p)
-        fwd_rank = pr + 1 if color == chess.WHITE else pr - 1
-        if 0 <= fwd_rank < 8:
-            fwd_sq = chess.square(pf, fwd_rank)
-            if board.piece_at(fwd_sq):
-                blockaded.append(p)
-
     # BACKWARD PAWNS
     backward = []
     for p in pawns:
@@ -154,12 +95,6 @@ def analyze_classical_structure(board: chess.Board, color: bool) -> Dict:
         "phalanx": phalanx,
         "chains": chains,
         "hanging": hanging,
-        "passed": passed,
-        "protected_passed": protected_passed,
-        "connected_passed": connected_passed,
-        "outside_passed": outside_passed,
-        "candidate_passed": candidate_passed,
-        "blockaded_passed": blockaded,
         "backward": backward,
         "file_map": file_map,
     }
@@ -205,46 +140,16 @@ def classify_pawn_levers(board: chess.Board, color: bool) -> List[Dict]:
                 toward_king = enemy_king and abs(atk_file - chess.square_file(enemy_king)) <= 2
 
                 lever_type = "good" if (is_advanced or is_central or toward_king) else "bad"
+                lever_subtype = "advanced pawn" if is_advanced else "central pawn break" if is_central else "king pawn break"
 
                 levers.append({
                     "from": sq,
                     "to": atk,
-                    "type": lever_type,
+                    "type": f"{lever_type} lever with {lever_subtype}",
                     "opens_file": True,
                 })
 
     return levers
-
-
-# PAWN STORMS
-def analyze_pawn_storm(board: chess.Board, color: bool) -> Dict:
-    enemy_king = board.king(not color)
-
-    ekf = chess.square_file(enemy_king)
-    storm_pawns = []
-    storm_score = 0
-
-    for p in board.pieces(chess.PAWN, color):
-        pf = chess.square_file(p)
-        pr = chess.square_rank(p)
-        dist = abs(pf - ekf)
-        advance = pr if color == chess.WHITE else 7 - pr
-
-        if dist == 0:
-            weight = 6
-        elif dist == 1:
-            weight = 4
-        elif dist == 2:
-            weight = 2
-        else:
-            continue
-
-        contribution = advance * weight
-        storm_score += contribution
-        storm_pawns.append({"square": p, "file_dist": dist, "advance": advance, "contribution": contribution})
-
-    return {"storm_score": storm_score, "storm_pawns": storm_pawns}
-
 
 # PAWN SHIELD
 def analyze_pawn_shield(board: chess.Board, color: bool) -> Dict:
@@ -254,7 +159,6 @@ def analyze_pawn_shield(board: chess.Board, color: bool) -> Dict:
     kr = chess.square_rank(king)
     shield_pawns = 0
     open_files = []
-    holes = []
 
     for df in [-1, 0, 1]:
         f = kf + df
@@ -279,10 +183,8 @@ def analyze_pawn_shield(board: chess.Board, color: bool) -> Dict:
             shield_pawns += 1
         else:
             open_files.append(hp.FILE_NAMES[f])
-            holes.append(f)
 
-    return {"shield_count": shield_pawns, "open_files": open_files, "holes": holes}
-
+    return {"shield_count": shield_pawns, "open_files": open_files}
 
 
 # WEAK SQUARES & OUTPOSTS
@@ -324,8 +226,6 @@ def compute_weak_squares(board: chess.Board, color: bool) -> Dict:
     else:
         weak_dark = sum(1 for s in weak_squares if hp.is_dark(s))
         weak_light = sum(1 for s in weak_squares if not hp.is_dark(s))
-        
-        
 
     return {
         "weak_squares": weak_squares,
@@ -335,7 +235,6 @@ def compute_weak_squares(board: chess.Board, color: bool) -> Dict:
         "weak_dark": weak_dark,
         "weak_light": weak_light,
     }
-
 
 # PAWN PRESSURE
 def compute_tension_grid(board: chess.Board) -> Dict:
@@ -353,7 +252,6 @@ def compute_tension_grid(board: chess.Board) -> Dict:
                     tension_pairs.append((sq, atk))
 
     return {
-        "tension_map": tension_map,
         "tension_squares": sum(tension_map),
         "tension_pairs": tension_pairs,
     }
@@ -374,39 +272,6 @@ def detect_minority_attack(board: chess.Board, color: bool) -> Dict:
 
     return results
 
-def forecast_pawn_breaks(board: chess.Board, color: bool) -> Dict:
-    enemy = not color
-    enemy_bb = board.pieces_mask(chess.PAWN, enemy)
-    breaks = []
-
-    for p in board.pieces(chess.PAWN, color):
-        pf = chess.square_file(p)
-        pr = chess.square_rank(p)
-
-        for atk in hp.pawn_attacks(p, color):
-            target = board.piece_at(atk)
-            if target and target.piece_type == chess.PAWN and target.color == enemy:
-                af = chess.square_file(atk)
-
-                opens_center = af in [2, 3, 4, 5]
-
-                defenders = len(list(board.attackers(enemy, atk)))
-                our_support = len(list(board.attackers(color, atk)))
-                is_safe = our_support >= defenders
-
-                breaks.append({
-                    "pawn": p,
-                    "break_sq": atk,
-                    "opens_center": opens_center,
-                    "is_safe": is_safe,
-                    "quality": "good" if (opens_center and is_safe) else "risky"
-                })
-
-    return {
-        "breaks": breaks,
-        "break_count": len(breaks),
-        "good_breaks": sum(1 for b in breaks if b["quality"] == "good"),
-    }
 
 def pawn_structure_symmetry(board: chess.Board) -> Dict:
     white_files = sorted(chess.square_file(p) for p in board.pieces(chess.PAWN, chess.WHITE))
@@ -422,6 +287,44 @@ def pawn_structure_symmetry(board: chess.Board) -> Dict:
         "black_pawn_count": len(black_files),
     }
 
+def score_side(pawns, required, optional, forbidden):
+    req_total = required.bit_count()
+    req_hit = (pawns & required).bit_count()
+
+    opt_total = optional.bit_count()
+    opt_hit = (pawns & optional).bit_count()
+
+    forbidden_present = (pawns & forbidden).bit_count()
+
+    score = (
+        0.7 * (req_hit / max(req_total, 1)) +
+        0.3 * (opt_hit / max(opt_total, 1))
+    )
+
+    score -= 0.25 * forbidden_present
+
+    return max(score, 0.0)
+
+def comp_struct(board: chess.Board, structure):
+    black_pawns = int(board.occupied_co[chess.BLACK] & board.pawns)
+    white_pawns = int(board.occupied_co[chess.WHITE] & board.pawns)
+    
+    white_score = score_side(
+        white_pawns,
+        structure.white_required,
+        structure.white_optional,
+        structure.white_forbidden,
+    )
+
+    black_score = score_side(
+        black_pawns,
+        structure.black_required,
+        structure.black_optional,
+        structure.black_forbidden,
+    )
+
+    return (white_score + black_score) / 2
+
 def full_pawn_evaluation(board: chess.Board) -> Dict:
     result = {}
 
@@ -434,67 +337,62 @@ def full_pawn_evaluation(board: chess.Board) -> Dict:
 
     symmetry = pawn_structure_symmetry(board)
     result["symmetry"] = symmetry
+    
+    best_structure = max(
+        ps.PAWN_STRUCTURES.values(),
+        key=lambda s: comp_struct(board, s)
+    )   
 
+    best_score = comp_struct(board, best_structure)
+    
+    check = (best_score > 0.5)
+    result["pawn_structure"] = best_structure.name if check else ""
+    result["pawn_structure_themes"] = best_structure.themes if check else ()
+    result["pawn_structure_character"] = best_structure.character if check else ""
+    result["pawn_structure_related_openings"] = best_structure.openings if check else ()
+    result["pawn_structure_similarity"] = best_score
 
     for color, name in [(chess.WHITE, "white"), (chess.BLACK, "black")]:
 
         classical = analyze_classical_structure(board, color)
         majorities = analyze_pawn_majorities(board, color)
         levers = classify_pawn_levers(board, color)
-        storm = analyze_pawn_storm(board, color)
         shield = analyze_pawn_shield(board, color)
         weak = compute_weak_squares(board, color)
-        breaks = forecast_pawn_breaks(board, color)
         minority = detect_minority_attack(board, color)
-
 
         result[name] = {
             # Classical
-            "doubled": classical["doubled"],
-            "tripled": classical["tripled"],
-            "isolated": classical["isolated"],
-            "islands": classical["islands"],
-            "phalanx": classical["phalanx"],
-            "chains": classical["chains"],
-            "hanging": classical["hanging"],
-            "backward_count": len(classical["backward"]),
+            "doubled_pawns": classical["doubled"],
+            "tripled_pawns": classical["tripled"],
+            "isolated_pawns": classical["isolated"],
+            "pawn_islands": classical["islands"],
+            "phalanx_pawns": classical["phalanx"],
+            "pawn_chains": classical["chains"],
+            "pawn_chain_type": "",
+            "hanging_pawns": classical["hanging"],
+            "backward_pawn_count": len(classical["backward"]),
             "backward_squares": classical["backward"],
-
-            # Passed pawns
-            "passed_count": len(classical["passed"]),
-            "passed_squares": classical["passed"],
-            "protected_passed": len(classical["protected_passed"]),
-            "connected_passed": len(classical["connected_passed"]),
-            "outside_passed": len(classical["outside_passed"]),
-            "blockaded_passed": len(classical["blockaded_passed"]),
-            "candidate_passed": len(classical["candidate_passed"]),
 
             # Majorities
             **majorities,
 
             # Levers
-            "lever_count": len(levers),
-            "good_levers": sum(1 for l in levers if l["type"] == "good"),
-            "bad_levers": sum(1 for l in levers if l["type"] == "bad"),
-            "levers": levers,
+            "good_pawn_levers": sum(1 for l in levers if l["type"] == "good"),
+            "bad_pawn_levers": sum(1 for l in levers if l["type"] == "bad"),
+            "pawn_levers": levers,
 
             # Storm & Shield
-            "storm_score": storm["storm_score"],
-            "storm_pawns": len(storm["storm_pawns"]),
-            "shield_count": shield["shield_count"],
+            "pawn_shield_count": shield["shield_count"],
             "king_open_files": shield["open_files"],
-            "king_holes": shield["holes"],
 
             # Weak squares & outposts
-            "weak_count": weak["weak_count"],
-            "outpost_count": weak["outpost_count"],
-            "weak_dark": weak["weak_dark"],
-            "weak_light": weak["weak_light"],
+            "weak_squares_count": weak["weak_count"],
+            "outpost_squares_count": weak["outpost_count"],
+            "weak_dark_squares": weak["weak_dark"],
+            "weak_light_squares": weak["weak_light"],
             "outpost_squares": [chess.square_name(s) for s in weak["outpost_squares"][:10]],
 
-            "break_count": breaks["break_count"],
-            "good_break": breaks["good_breaks"],
-            "breaks": breaks["breaks"],
             **minority,
         }
 

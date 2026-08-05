@@ -1,6 +1,6 @@
 import chess
 from typing import Dict, List, Tuple, Optional
-import piece_analysis.helpers as hp
+from . import helpers as hp
 
 def analyze_knight_mobility(board: chess.Board, color: bool) -> Dict:
 
@@ -120,14 +120,13 @@ def full_knight_evaluation(board: chess.Board) -> Dict:
 
         result[name] = {
             "knight_count": mobility["count"],
-            "total_mobility": mobility["total_mobility"],
-            "avg_mobility": round(mobility["avg_mobility"], 2),
+            "total_knight_mobility": mobility["total_mobility"],
             "per_knight_mobility": [
                 {"sq": d["name"], "mobility": d["mobility"],
                  "attacks_enemy": d["attacks_enemy"]}
                 for d in mobility["per_knight"]
             ],
-            "centralization_score": central["total_centralization"],
+            "knight_centralization_score": central["total_centralization"],
             "rim_knights": central["rim_knights"],
             "mutual_defense_pairs": coord["mutual_defense_pairs"],
             "shared_attack_squares": coord["shared_attack_squares"],

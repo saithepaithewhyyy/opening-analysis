@@ -1,12 +1,10 @@
 import chess
 from typing import Dict, List, Tuple, Optional
-import piece_analysis.helpers as hp
-
+from . import helpers as hp
 
 def _piece_cache(board: chess.Board) -> Dict[int, Optional[chess.Piece]]:
     """Build a square→piece lookup"""
     return {sq: board.piece_at(sq) for sq in chess.SQUARES}
-
 
 
 def analyze_bishop_mobility(board: chess.Board, color: bool,
@@ -176,46 +174,10 @@ def analyze_opposite_color_bishops(board: chess.Board,
     }
 
 
-def analyze_bishop_battery(board: chess.Board, color: bool,
-                            piece_cache: Optional[Dict] = None) -> Dict:
-    """Battery detection with O(1) queen-in-ray lookup via a set."""
-    bishops = list(board.pieces(chess.BISHOP, color))
-    queens  = list(board.pieces(chess.QUEEN,  color))
-    queen_set   = set(queens)
-    enemy_king  = board.king(not color)
-    batteries   = []
-
-    if piece_cache is None:
-        piece_cache = _piece_cache(board)
-
-    for bsq in bishops:
-        for ray in hp.get_diagonal_squares(bsq):
-            for i, rs in enumerate(ray):
-                # Stop scanning this ray on the first blocker.
-                occupant = piece_cache.get(rs)
-                if occupant:
-                    if rs in queen_set:
-                        # Path from bishop to queen is clear (no piece at indices < i).
-                        clear = not any(piece_cache.get(ray[j]) for j in range(i))
-                        points_to_king = enemy_king is not None and enemy_king in ray
-                        batteries.append({
-                            "bishop": chess.square_name(bsq),
-                            "queen":  chess.square_name(rs),
-                            "clear_path": clear,
-                            "points_to_king": points_to_king,
-                        })
-                    break   # ray blocked regardless
-
-    return {
-        "battery_count": len(batteries),
-        "batteries": batteries,
-        "king_targeting_battery": any(b["points_to_king"] for b in batteries),
-    }
-
 
 
 def full_bishop_evaluation(board: chess.Board) -> Dict:
-    phase        = hp.compute_phase(board)
+    phase = hp.compute_phase(board)
     piece_cache  = _piece_cache(board)
 
     result = {
@@ -232,13 +194,12 @@ def full_bishop_evaluation(board: chess.Board) -> Dict:
         pair = len(list(bishops)) > 2
         open_diag = analyze_open_diagonals(board, color, piece_cache)
         fianchetto = analyze_fianchetto(board, color, piece_cache)
-        battery = analyze_bishop_battery(board, color, piece_cache)
 
         result[name] = {
             "bishop_count":mobility["count"],
             "bishop_locations": bishop_squares, 
-            "bishop_pair": pair,
-            "bishop_mobility": mobility["total_mobility"],
+            "bishop_pair_exists": pair,
+            "total_bishop_mobility": mobility["total_mobility"],
             "per_bishop_mobility": [
                 {"sq": d["name"], "color": d["color"],
                  "mobility": d["mobility"], "center_attacks": d["attacks_center"]}
@@ -249,8 +210,6 @@ def full_bishop_evaluation(board: chess.Board) -> Dict:
             "blocked_diagonals": open_diag["blocked_diagonals"],
             "fianchetto_count": fianchetto["fianchetto_count"],
             "fianchettos":fianchetto["fianchettos"],
-            "battery_count": battery["battery_count"],
-            "king_targeting_battery": battery["king_targeting_battery"],
         }
 
     return result

@@ -11,6 +11,8 @@ import chess_classifier as cc
 from tqdm import tqdm
 import os
 import pickle
+
+from mediawiki_theory.piece_analysis.complete import position_evaluate
 from . import parser
 from typing import Dict
 
@@ -65,7 +67,8 @@ class WikibooksCrawler:
             fen = board.fen()
 
             bayesian_result, topk_probs, topk_classes, grad_data = parser.get_data(fen=fen, engine=self.engine)
-     
+            piece_analysis = position_evaluate(fen)
+
             entry = self.theory_db.setdefault(
                 cc.fen_to_hash(fen),
                 {
@@ -79,7 +82,8 @@ class WikibooksCrawler:
                     }
                         for r in bayesian_result
                     ],
-                    "grad_data": grad_data, 
+#                    "grad_data": grad_data,
+                    "piece_analysis": piece_analysis,
                     "entries": [],
                 },
             )

@@ -1,6 +1,6 @@
 import chess
 from typing import Dict, List, Tuple, Optional
-import piece_analysis.helpers as hp
+from . import helpers as hp
 
 def analyze_queen_mobility(board: chess.Board, color: bool) -> Dict:
     queens = list(board.pieces(chess.QUEEN, color))
@@ -260,14 +260,14 @@ def full_queen_evaluation(board: chess.Board) -> Dict:
 
         result[name] = {
             "queen_count": mobility["count"],
-            "total_mobility": mobility["total_mobility"],
+            "total_queen_mobility": mobility["total_mobility"],
             "per_queen_mobility": [
                 {"sq": d["name"], "mobility": d["mobility"],
                  "diag": d["diagonal_mobility"], "orth": d["orthogonal_mobility"],
                  "center": d["attacks_center"]}
                 for d in mobility["per_queen"]
             ],
-            "minors_on_home": development["minors_on_home_rank"],
+            "minor_pieces_on_home_rank": development["minors_on_home_rank"],
             "early_dev_penalty": development["early_development_penalty"],
             "total_exposure": safety["total_exposure"],
             "trapped_queens": safety["trapped_queens"],

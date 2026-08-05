@@ -1,6 +1,6 @@
 import chess
 from typing import Dict, List, Tuple, Optional
-import piece_analysis.helpers as hp
+from . import helpers as hp
 
 def analyze_rook_mobility(board: chess.Board, color: bool) -> Dict:
     
@@ -160,8 +160,7 @@ def full_rook_evaluation(board: chess.Board) -> Dict:
 
         result[name] = {
             "rook_count": mobility["count"],
-            "total_mobility": mobility["total_mobility"],
-            "avg_mobility": round(mobility["avg_mobility"], 2),
+            "total_rook_mobility": mobility["total_mobility"],
             "per_rook_mobility": [
                 {"sq": d["name"], "mobility": d["mobility"],
                  "file_mob": d["file_mobility"], "rank_mob": d["rank_mobility"]}
@@ -171,10 +170,8 @@ def full_rook_evaluation(board: chess.Board) -> Dict:
             "semi_open_file_count": files["semi_open_file_count"],
             "contested_files": files["contested_files"],
             "available_open_files": files["available_open_files"],
-            "per_rook_file": files["per_rook"],
-            "connected": connected["connected"],
+            "rooks_are_connected": connected["connected"],
             "total_activity": activity["total_activity"],
-            "per_rook_activity": activity["per_rook"],
         }
 
     return result
