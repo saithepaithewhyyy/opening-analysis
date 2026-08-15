@@ -10,7 +10,8 @@ import torch.nn as nn
 # Square stream input transform - (batch, 64, 12) 
 # Piece stream input transform (extra dim for overall occupied) - (batch, 13, 64)
 # 
-# Scalar features (per board) - {castling rights, en passant, side to move, target entropy, depth statistics}
+# Scalar features (per board) - {castling rights, en passant, side to move, target entropy, depth statistics
+# For n_classes ~ 3000 classed, this comes to around ~4M parameters
 
 class OpeningModel(nn.Module):
     def __init__(self,
@@ -133,14 +134,14 @@ class OpeningModel(nn.Module):
             query=sq, key=bb, value=bb,
             need_weights=True, average_attn_weights=False
         )
-        attn_maps['cross_sq'] = cross_w_sq.detach()
+        attn_maps['cross_sq_bb'] = cross_w_sq.detach()
         sq = self.norm_sq(sq + cross_out_sq)
 
         cross_out_bb, cross_w_bb = self.cross_attn_bb(
             query=bb, key=sq, value=sq,
             need_weights=True, average_attn_weights=False
         )
-        attn_maps['cross_bb'] = cross_w_bb.detach()
+        attn_maps['cross_bb_sq'] = cross_w_bb.detach()
         bb = self.norm_bb(bb + cross_out_bb)
 
         sq_out = sq.mean(dim=1)
@@ -149,4 +150,5 @@ class OpeningModel(nn.Module):
         op = torch.cat([sq_out, bb_out, meta_out], dim=-1)
         op = self.ff(op)
 
-        return torch.log_softmax(op, dim=-1), attn_maps
+        return torch.log_softmax(op, dim=-1), attn_maps, op
+        

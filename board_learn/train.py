@@ -145,7 +145,7 @@ def train():
             'val_loss': avg_val,
             'eco_classes': eco_classes,
         }
-        torch.save(checkpoint, os.path.join(CHECKPOINTS_DIR, "final_model.pt"))
+    torch.save(checkpoint, os.path.join(CHECKPOINTS_DIR, "final_model.pt"))
         
     return
     

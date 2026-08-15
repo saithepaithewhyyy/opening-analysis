@@ -3,7 +3,7 @@ import pandas as pd
 from . import inference
 from . import utils
 
-def visualize(attn_maps, bb_grad):
+def visualize(attn_maps, bb_grad, encoding):
     bb_grad = bb_grad[0]
     bb_grad_np = bb_grad.cpu().numpy()
 
@@ -21,7 +21,7 @@ def visualize(attn_maps, bb_grad):
         )
     )
 
-    return grad_data
+    return grad_data, encoding
 
 if __name__ == "__main__":
     fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

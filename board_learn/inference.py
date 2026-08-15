@@ -39,11 +39,11 @@ def inference(pos, form="fen", topk=5, visual_flag=True, verbose=True, checkpoin
     grad_plots = []
     if visual_flag:
         bb = bb.requires_grad_(True)
-        out, attn_maps = model.forward_with_attn_maps(bb, sc)
+        out, attn_maps, encoding = model.forward_with_attn_maps(bb, sc)
         # this is literally just a hotfix, i need to think of a better etric that I can actually use
         target = out[:, out.argmax(dim=-1)].sum()
         target.backward()
-        grad_plots = viz.visualize(attn_maps, bb.grad)
+        grad_data, pos_encoding = viz.visualize(attn_maps, bb.grad, encoding)
     else:
         with torch.no_grad():
             out = model(bb, sc)
@@ -60,7 +60,7 @@ def inference(pos, form="fen", topk=5, visual_flag=True, verbose=True, checkpoin
             for idx, prob in zip(topk_idx[b].tolist(), topk_probs[b].tolist()):
                 print(f"{eco_classes[idx]:<{max_len}} | {prob}")
      
-    return topk_probs, topk_idx, grad_plots
+    return topk_probs, topk_idx, grad_plots, pos_encoding
 
 if __name__ == "__main__":
     fen = "rnbqkb1r/pppp1ppp/5n2/4p3/2b1p3/3p4/ppp2ppp/rnbqk1nr b kqkq - 0 3"

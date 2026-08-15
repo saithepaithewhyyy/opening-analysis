@@ -66,7 +66,7 @@ class WikibooksCrawler:
 
             fen = board.fen()
 
-            bayesian_result, topk_probs, topk_classes, grad_data = parser.get_data(fen=fen, engine=self.engine)
+            bayesian_result, topk_probs, topk_classes, grad_data, pos_encoding = parser.get_data(fen=fen, engine=self.engine)
             piece_analysis = position_evaluate(fen)
 
             entry = self.theory_db.setdefault(
@@ -83,6 +83,7 @@ class WikibooksCrawler:
                         for r in bayesian_result
                     ],
 #                    "grad_data": grad_data,
+                    "position_encoding": pos_encoding,
                     "piece_analysis": piece_analysis,
                     "entries": [],
                 },
@@ -119,7 +120,7 @@ class WikibooksCrawler:
                 self.theory_db,
                 f,
                 ensure_ascii=False,
-                indent=4,
+                indent=2,
             )
 
 

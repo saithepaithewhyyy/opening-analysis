@@ -58,14 +58,15 @@ def get_data(engine, fen: str =""):
         return ""
     
     bayesian_result = utils.classify(fen=fen, engine=engine, verbose=False)
-    topk_probs, topk_idx, grad_data = inference(pos=fen, form="fen", topk=3, visual_flag=True, verbose=False)
+    topk_probs, topk_idx, grad_data, pos_encoding = inference(pos=fen, form="fen", topk=3, visual_flag=True, verbose=False)
+    pos_encoding = pos_encoding.squeeze(0).detach().cpu().tolist()
 #    topk_probs, topk_idx, grad_data = [], [], []
  
     with open(os.path.join(CHECKPOINTS_DIR, "eco_classes.pkl"), "rb") as f:
         eco_classes = pickle.load(f)
     
     topk_classes =[[eco_classes[idx] for idx in indices.tolist()] for indices in topk_idx]  
-    return bayesian_result, topk_probs, topk_classes, grad_data 
+    return bayesian_result, topk_probs, topk_classes, grad_data, pos_encoding
 
 def parse_theory(wikitext: str) -> str:
     code = mw.parse(wikitext)
